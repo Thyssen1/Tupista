@@ -2,34 +2,10 @@
 
 #include <utility>  // std::move
 
+#include "sudoku/units.hpp"  // unitCell — was a private copy here until the
+                             // hint engine needed the same geometry
+
 namespace sudoku {
-
-// Anonymous namespace = internal linkage: unitCell exists only inside this
-// .cpp. It is an implementation detail, so it stays out of the header and out
-// of the linker's global name pool.
-namespace {
-
-// Maps "slot number within a unit" to a board coordinate, so the three unit
-// kinds can share one loop below instead of three near-identical ones.
-//
-//   Row 3, slot 0..8  -> (3, 0) .. (3, 8)
-//   Col 3, slot 0..8  -> (0, 3) .. (8, 3)
-//   Box 3, slot 0..8  -> the 3x3 block, read left-to-right, top-to-bottom
-//
-// Box arithmetic: boxes are numbered row-major, so box b starts at row
-// (b / 3) * 3 and column (b % 3) * 3. Within the box, slot s sits at row
-// offset s / 3 and column offset s % 3.
-CellRef unitCell(UnitKind unit, int unitIndex, int slot) {
-    switch (unit) {
-        case UnitKind::Row: return {unitIndex, slot};
-        case UnitKind::Col: return {slot, unitIndex};
-        case UnitKind::Box: return {(unitIndex / 3) * 3 + slot / 3,
-                                    (unitIndex % 3) * 3 + slot % 3};
-    }
-    return {};  // unreachable, but GCC warns about "control reaches end" without it
-}
-
-}
 
 std::vector<Conflict> validate(const Board& board) {
     std::vector<Conflict> conflicts;

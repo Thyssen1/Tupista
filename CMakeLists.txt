@@ -13,9 +13,11 @@ project(Tupista VERSION 1.0.0 LANGUAGES CXX)
 #                                    portability (MSVC for WPF, Clang for iOS)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Core is a static library for tests and for iOS later
+# Core is a static library for tests and for iOS later 
 add_subdirectory(core)
 
 # enable_testing() turns on CTest support for this build tree, so "ctest" can

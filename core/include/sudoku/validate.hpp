@@ -4,22 +4,9 @@
 #include <vector>
 
 #include "sudoku/board.hpp"
+#include "sudoku/units.hpp"  // UnitKind, CellRef — shared with the hint engine
 
 namespace sudoku {
-
-// The three kinds of "unit" (a group of 9 cells that must hold the digits 1-9
-// exactly once). Every cell belongs to exactly one row, one column, one box.
-enum class UnitKind : std::uint8_t { Row, Col, Box };
-
-// A coordinate pair. We could have used std::pair<int,int>, but then every
-// use site reads .first/.second and you have to remember which is which.
-// Named members make the call sites self-documenting.
-struct CellRef {
-    int row = 0;
-    int col = 0;
-
-    bool operator==(const CellRef&) const = default;
-};
 
 // One duplicated digit inside one unit.
 //

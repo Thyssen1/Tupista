@@ -10,6 +10,8 @@ add_executable(sudoku_tests
         src/BoardTests.cpp
         src/ValidateTests.cpp
         src/SolverTests.cpp
+        src/HumanSolverTests.cpp
+        src/HintTests.cpp
 )
 
 # Linking sudoku_core also inherits its PUBLIC include directory (that is how
@@ -21,6 +23,13 @@ target_link_libraries(sudoku_tests PRIVATE
         sudoku_core
         doctest::doctest
 )
+
+# By default doctest forward-declares pieces of the standard library instead of
+# including the real headers, to keep compile times down. Recent MSVC standard
+# libraries reject that (you get a wall of errors inside <__msvc_string_view.hpp>
+# about an undefined std::basic_ostream). This macro tells doctest to include
+# the genuine headers. Costs a little compile time, works on every compiler.
+target_compile_definitions(sudoku_tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
 
 # Registers the executable with CTest under the name sudoku_tests, so
 # "ctest --test-dir <builddir>" knows to run it and treat a non-zero exit
