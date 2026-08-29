@@ -1,5 +1,8 @@
-add_library(sudoku_core STATIC  
+add_library(sudoku_core STATIC
     src/board.cpp
+    src/validate.cpp
+    src/rules.cpp
+    src/solver.cpp
 )
 
 target_include_directories(sudoku_core PUBLIC

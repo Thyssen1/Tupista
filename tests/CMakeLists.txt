@@ -8,6 +8,8 @@ FetchContent_MakeAvailable(doctest)
 add_executable(sudoku_tests
         src/main.cpp
         src/BoardTests.cpp
+        src/ValidateTests.cpp
+        src/SolverTests.cpp
 )
 
 # Linking sudoku_core also inherits its PUBLIC include directory (that is how
