@@ -1,0 +1,67 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        "Original" — the blue scheme the app shipped with.
+
+        Every palette file defines exactly the same set of keys, in a Light and
+        a Dark variant. Swapping palettes therefore swaps colours and nothing
+        else: no layout knows a hex value, and nothing references a brush that
+        might be missing from another palette.
+    -->
+    <ResourceDictionary.ThemeDictionaries>
+
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="SurfaceBrush"        Color="#F4F5F7" />
+            <SolidColorBrush x:Key="PanelBrush"          Color="#FFFFFF" />
+            <SolidColorBrush x:Key="PanelBorderBrush"    Color="#E3E6EB" />
+            <SolidColorBrush x:Key="CellBrush"           Color="#FFFFFF" />
+            <SolidColorBrush x:Key="CellBorderBrush"     Color="#D9DDE4" />
+            <SolidColorBrush x:Key="CellHoverBrush"      Color="#EDF3FF" />
+            <SolidColorBrush x:Key="GridLineBrush"       Color="#2A3038" />
+            <SolidColorBrush x:Key="GivenTextBrush"      Color="#11151B" />
+            <SolidColorBrush x:Key="UserTextBrush"       Color="#2C6BED" />
+            <SolidColorBrush x:Key="SubtleTextBrush"     Color="#6B7280" />
+            <SolidColorBrush x:Key="CandidateTextBrush"  Color="#9AA2AE" />
+            <SolidColorBrush x:Key="AccentBrush"         Color="#2C6BED" />
+            <SolidColorBrush x:Key="AccentHoverBrush"    Color="#1F5AD4" />
+            <SolidColorBrush x:Key="AccentTextBrush"     Color="#FFFFFF" />
+            <SolidColorBrush x:Key="SelectionBrush"      Color="#2C6BED" />
+            <SolidColorBrush x:Key="ButtonBrush"         Color="#FFFFFF" />
+            <SolidColorBrush x:Key="ButtonHoverBrush"    Color="#F0F3F8" />
+            <SolidColorBrush x:Key="ButtonBorderBrush"   Color="#D3D8E0" />
+            <SolidColorBrush x:Key="ConflictBrush"       Color="#FFDADA" />
+            <SolidColorBrush x:Key="PlacementBrush"      Color="#CFEFD8" />
+            <SolidColorBrush x:Key="PatternBrush"        Color="#FFF0C4" />
+            <SolidColorBrush x:Key="EliminatedBrush"     Color="#FBE2E2" />
+            <SolidColorBrush x:Key="HintPanelBrush"      Color="#EEF4FF" />
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="SurfaceBrush"        Color="#14171C" />
+            <SolidColorBrush x:Key="PanelBrush"          Color="#1C2027" />
+            <SolidColorBrush x:Key="PanelBorderBrush"    Color="#2C323B" />
+            <SolidColorBrush x:Key="CellBrush"           Color="#22272F" />
+            <SolidColorBrush x:Key="CellBorderBrush"     Color="#333A45" />
+            <SolidColorBrush x:Key="CellHoverBrush"      Color="#2C3543" />
+            <SolidColorBrush x:Key="GridLineBrush"       Color="#9AA3B0" />
+            <SolidColorBrush x:Key="GivenTextBrush"      Color="#F1F4F8" />
+            <SolidColorBrush x:Key="UserTextBrush"       Color="#74AEFF" />
+            <SolidColorBrush x:Key="SubtleTextBrush"     Color="#9AA3B0" />
+            <SolidColorBrush x:Key="CandidateTextBrush"  Color="#707A88" />
+            <SolidColorBrush x:Key="AccentBrush"         Color="#4A87F5" />
+            <SolidColorBrush x:Key="AccentHoverBrush"    Color="#6199F7" />
+            <SolidColorBrush x:Key="AccentTextBrush"     Color="#0B0E12" />
+            <SolidColorBrush x:Key="SelectionBrush"      Color="#4A87F5" />
+            <SolidColorBrush x:Key="ButtonBrush"         Color="#262C35" />
+            <SolidColorBrush x:Key="ButtonHoverBrush"    Color="#303844" />
+            <SolidColorBrush x:Key="ButtonBorderBrush"   Color="#3A424E" />
+            <SolidColorBrush x:Key="ConflictBrush"       Color="#5C2A2A" />
+            <SolidColorBrush x:Key="PlacementBrush"      Color="#234C2F" />
+            <SolidColorBrush x:Key="PatternBrush"        Color="#4B4020" />
+            <SolidColorBrush x:Key="EliminatedBrush"     Color="#4B2828" />
+            <SolidColorBrush x:Key="HintPanelBrush"      Color="#1E2733" />
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

@@ -1,0 +1,77 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        "Ink & Vermilion" — warm paper surfaces, deep vermilion accent, teal for
+        the player's own work. Meant to echo a printed puzzle book.
+
+        Two rules keep red unambiguous:
+
+        1. THE ACCENT NEVER APPEARS INSIDE THE GRID. Vermilion means "primary
+           action" in the chrome; red inside the grid means "illegal". They
+           never share a surface. That is why SelectionBrush is its own key
+           rather than reusing AccentBrush — the selection outline is on the
+           board, so it must not be the accent here.
+
+        2. The player's digits are teal, not the accent. Red digits would read
+           as mistakes.
+
+        Eliminations are violet rather than a red tint, for the same reason: a
+        ruled-out candidate is not an error, and red said otherwise.
+    -->
+    <ResourceDictionary.ThemeDictionaries>
+
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="SurfaceBrush"        Color="#F6F3EE" />
+            <SolidColorBrush x:Key="PanelBrush"          Color="#FFFFFF" />
+            <SolidColorBrush x:Key="PanelBorderBrush"    Color="#E6E0D6" />
+            <SolidColorBrush x:Key="CellBrush"           Color="#FFFFFF" />
+            <SolidColorBrush x:Key="CellBorderBrush"     Color="#E2DCD2" />
+            <SolidColorBrush x:Key="CellHoverBrush"      Color="#F4F1EA" />
+            <SolidColorBrush x:Key="GridLineBrush"       Color="#2E2A25" />
+            <SolidColorBrush x:Key="GivenTextBrush"      Color="#1A1714" />
+            <SolidColorBrush x:Key="UserTextBrush"       Color="#0F766E" />
+            <SolidColorBrush x:Key="SubtleTextBrush"     Color="#6B655C" />
+            <SolidColorBrush x:Key="CandidateTextBrush"  Color="#A39B90" />
+            <SolidColorBrush x:Key="AccentBrush"         Color="#B3261E" />
+            <SolidColorBrush x:Key="AccentHoverBrush"    Color="#931D17" />
+            <SolidColorBrush x:Key="AccentTextBrush"     Color="#FFFFFF" />
+            <SolidColorBrush x:Key="SelectionBrush"      Color="#0F766E" />
+            <SolidColorBrush x:Key="ButtonBrush"         Color="#FFFFFF" />
+            <SolidColorBrush x:Key="ButtonHoverBrush"    Color="#F1EDE5" />
+            <SolidColorBrush x:Key="ButtonBorderBrush"   Color="#DDD6CA" />
+            <SolidColorBrush x:Key="ConflictBrush"       Color="#FFD9D4" />
+            <SolidColorBrush x:Key="PlacementBrush"      Color="#CFEFD8" />
+            <SolidColorBrush x:Key="PatternBrush"        Color="#FFF0C4" />
+            <SolidColorBrush x:Key="EliminatedBrush"     Color="#EDE9FE" />
+            <SolidColorBrush x:Key="HintPanelBrush"      Color="#EFFAF8" />
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="SurfaceBrush"        Color="#17140F" />
+            <SolidColorBrush x:Key="PanelBrush"          Color="#211D18" />
+            <SolidColorBrush x:Key="PanelBorderBrush"    Color="#322C25" />
+            <SolidColorBrush x:Key="CellBrush"           Color="#262119" />
+            <SolidColorBrush x:Key="CellBorderBrush"     Color="#3A332A" />
+            <SolidColorBrush x:Key="CellHoverBrush"      Color="#322B22" />
+            <SolidColorBrush x:Key="GridLineBrush"       Color="#A79E92" />
+            <SolidColorBrush x:Key="GivenTextBrush"      Color="#F5F1EA" />
+            <SolidColorBrush x:Key="UserTextBrush"       Color="#2DD4BF" />
+            <SolidColorBrush x:Key="SubtleTextBrush"     Color="#A79E92" />
+            <SolidColorBrush x:Key="CandidateTextBrush"  Color="#776E62" />
+            <SolidColorBrush x:Key="AccentBrush"         Color="#E05B4F" />
+            <SolidColorBrush x:Key="AccentHoverBrush"    Color="#EE7267" />
+            <SolidColorBrush x:Key="AccentTextBrush"     Color="#1A0F0D" />
+            <SolidColorBrush x:Key="SelectionBrush"      Color="#2DD4BF" />
+            <SolidColorBrush x:Key="ButtonBrush"         Color="#2B2620" />
+            <SolidColorBrush x:Key="ButtonHoverBrush"    Color="#372F27" />
+            <SolidColorBrush x:Key="ButtonBorderBrush"   Color="#423A31" />
+            <SolidColorBrush x:Key="ConflictBrush"       Color="#5E2B26" />
+            <SolidColorBrush x:Key="PlacementBrush"      Color="#244C31" />
+            <SolidColorBrush x:Key="PatternBrush"        Color="#4E4222" />
+            <SolidColorBrush x:Key="EliminatedBrush"     Color="#322B4A" />
+            <SolidColorBrush x:Key="HintPanelBrush"      Color="#1C2A28" />
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

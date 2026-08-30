@@ -17,38 +17,8 @@
 
         Keyboard input is bindings too. A keystroke invokes a command exactly
         like a button click, which is what keeps MainWindow.axaml.cs empty.
-        CommandParameter is always a string, hence the parsing in the view model.
+        The bindings live on the BOARD, not on the window — see below.
     -->
-    <Window.KeyBindings>
-        <KeyBinding Gesture="Up"    Command="{Binding MoveCommand}" CommandParameter="up" />
-        <KeyBinding Gesture="Down"  Command="{Binding MoveCommand}" CommandParameter="down" />
-        <KeyBinding Gesture="Left"  Command="{Binding MoveCommand}" CommandParameter="left" />
-        <KeyBinding Gesture="Right" Command="{Binding MoveCommand}" CommandParameter="right" />
-
-        <KeyBinding Gesture="D1" Command="{Binding EnterDigitCommand}" CommandParameter="1" />
-        <KeyBinding Gesture="D2" Command="{Binding EnterDigitCommand}" CommandParameter="2" />
-        <KeyBinding Gesture="D3" Command="{Binding EnterDigitCommand}" CommandParameter="3" />
-        <KeyBinding Gesture="D4" Command="{Binding EnterDigitCommand}" CommandParameter="4" />
-        <KeyBinding Gesture="D5" Command="{Binding EnterDigitCommand}" CommandParameter="5" />
-        <KeyBinding Gesture="D6" Command="{Binding EnterDigitCommand}" CommandParameter="6" />
-        <KeyBinding Gesture="D7" Command="{Binding EnterDigitCommand}" CommandParameter="7" />
-        <KeyBinding Gesture="D8" Command="{Binding EnterDigitCommand}" CommandParameter="8" />
-        <KeyBinding Gesture="D9" Command="{Binding EnterDigitCommand}" CommandParameter="9" />
-
-        <KeyBinding Gesture="NumPad1" Command="{Binding EnterDigitCommand}" CommandParameter="1" />
-        <KeyBinding Gesture="NumPad2" Command="{Binding EnterDigitCommand}" CommandParameter="2" />
-        <KeyBinding Gesture="NumPad3" Command="{Binding EnterDigitCommand}" CommandParameter="3" />
-        <KeyBinding Gesture="NumPad4" Command="{Binding EnterDigitCommand}" CommandParameter="4" />
-        <KeyBinding Gesture="NumPad5" Command="{Binding EnterDigitCommand}" CommandParameter="5" />
-        <KeyBinding Gesture="NumPad6" Command="{Binding EnterDigitCommand}" CommandParameter="6" />
-        <KeyBinding Gesture="NumPad7" Command="{Binding EnterDigitCommand}" CommandParameter="7" />
-        <KeyBinding Gesture="NumPad8" Command="{Binding EnterDigitCommand}" CommandParameter="8" />
-        <KeyBinding Gesture="NumPad9" Command="{Binding EnterDigitCommand}" CommandParameter="9" />
-
-        <KeyBinding Gesture="D0"     Command="{Binding EnterDigitCommand}" CommandParameter="0" />
-        <KeyBinding Gesture="Delete" Command="{Binding EnterDigitCommand}" CommandParameter="0" />
-        <KeyBinding Gesture="Back"   Command="{Binding EnterDigitCommand}" CommandParameter="0" />
-    </Window.KeyBindings>
 
     <Grid RowDefinitions="Auto,*" Margin="20">
 
@@ -66,13 +36,30 @@
             <!-- Settings lives in a Flyout: a popup declared inline, opened by
                  its button with no handler and no second window to manage. -->
             <Button Grid.Column="1" Classes="action" HorizontalAlignment="Right"
-                    Padding="14,8" Content="Settings">
+                    Padding="14,8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <!-- Stretch=Uniform keeps the gear round whatever size the
+                         box is; the Fill binding makes it inherit the button's
+                         own foreground, so it follows the palette. -->
+                    <Path Data="{StaticResource GearIcon}"
+                          Fill="{Binding $parent[Button].Foreground}"
+                          Width="15" Height="15" Stretch="Uniform"
+                          VerticalAlignment="Center" />
+                    <TextBlock Text="Settings" VerticalAlignment="Center" />
+                </StackPanel>
                 <Button.Flyout>
                     <Flyout Placement="BottomEdgeAlignedRight">
                         <StackPanel Width="230" Spacing="10" Margin="4">
                             <TextBlock Text="SETTINGS" Classes="sectionHeader" Margin="0" />
 
-                            <TextBlock Text="Appearance" FontSize="12"
+                            <TextBlock Text="Colour scheme" FontSize="12"
+                                       Foreground="{DynamicResource SubtleTextBrush}" />
+                            <ComboBox ItemsSource="{Binding PaletteOptions}"
+                                      SelectedItem="{Binding Palette}"
+                                      HorizontalAlignment="Stretch"
+                                      CornerRadius="10" />
+
+                            <TextBlock Text="Light / dark" FontSize="12" Margin="0,6,0,0"
                                        Foreground="{DynamicResource SubtleTextBrush}" />
                             <ComboBox ItemsSource="{Binding ThemeOptions}"
                                       SelectedItem="{Binding Theme}"
@@ -80,7 +67,7 @@
                                       CornerRadius="10" />
                             <TextBlock FontSize="11" TextWrapping="Wrap"
                                        Foreground="{DynamicResource SubtleTextBrush}"
-                                       Text="System follows your operating system setting. Your choice is remembered." />
+                                       Text="Every scheme has a light and a dark version, so the two settings combine. System follows your operating system. Both are remembered." />
 
                             <Separator Margin="0,4" />
 
@@ -97,8 +84,64 @@
 
             <Border Grid.Column="0" Classes="card" VerticalAlignment="Top"
                     HorizontalAlignment="Left" Padding="18">
+                <!--
+                    The keyboard bindings live HERE rather than on the Window.
+
+                    On the Window they fired no matter what had focus, so typing
+                    a digit into the puzzle-name box also dropped that digit
+                    onto the board. Avalonia evaluates KeyBindings on the
+                    focused element and then up its ancestors, so attaching them
+                    to the board means they only fire while focus is inside the
+                    board — the name box is not a descendant, so it keeps its
+                    own keystrokes.
+                -->
                 <Border BorderBrush="{DynamicResource GridLineBrush}" BorderThickness="2"
-                        CornerRadius="4" ClipToBounds="True">
+                        CornerRadius="4" ClipToBounds="True" Focusable="True">
+                    <Border.KeyBindings>
+                        <KeyBinding Gesture="Up"    Command="{Binding MoveCommand}" CommandParameter="up" />
+                        <KeyBinding Gesture="Down"  Command="{Binding MoveCommand}" CommandParameter="down" />
+                        <KeyBinding Gesture="Left"  Command="{Binding MoveCommand}" CommandParameter="left" />
+                        <KeyBinding Gesture="Right" Command="{Binding MoveCommand}" CommandParameter="right" />
+
+                        <KeyBinding Gesture="D1" Command="{Binding EnterDigitCommand}" CommandParameter="1" />
+                        <KeyBinding Gesture="D2" Command="{Binding EnterDigitCommand}" CommandParameter="2" />
+                        <KeyBinding Gesture="D3" Command="{Binding EnterDigitCommand}" CommandParameter="3" />
+                        <KeyBinding Gesture="D4" Command="{Binding EnterDigitCommand}" CommandParameter="4" />
+                        <KeyBinding Gesture="D5" Command="{Binding EnterDigitCommand}" CommandParameter="5" />
+                        <KeyBinding Gesture="D6" Command="{Binding EnterDigitCommand}" CommandParameter="6" />
+                        <KeyBinding Gesture="D7" Command="{Binding EnterDigitCommand}" CommandParameter="7" />
+                        <KeyBinding Gesture="D8" Command="{Binding EnterDigitCommand}" CommandParameter="8" />
+                        <KeyBinding Gesture="D9" Command="{Binding EnterDigitCommand}" CommandParameter="9" />
+
+                        <KeyBinding Gesture="NumPad1" Command="{Binding EnterDigitCommand}" CommandParameter="1" />
+                        <KeyBinding Gesture="NumPad2" Command="{Binding EnterDigitCommand}" CommandParameter="2" />
+                        <KeyBinding Gesture="NumPad3" Command="{Binding EnterDigitCommand}" CommandParameter="3" />
+                        <KeyBinding Gesture="NumPad4" Command="{Binding EnterDigitCommand}" CommandParameter="4" />
+                        <KeyBinding Gesture="NumPad5" Command="{Binding EnterDigitCommand}" CommandParameter="5" />
+                        <KeyBinding Gesture="NumPad6" Command="{Binding EnterDigitCommand}" CommandParameter="6" />
+                        <KeyBinding Gesture="NumPad7" Command="{Binding EnterDigitCommand}" CommandParameter="7" />
+                        <KeyBinding Gesture="NumPad8" Command="{Binding EnterDigitCommand}" CommandParameter="8" />
+                        <KeyBinding Gesture="NumPad9" Command="{Binding EnterDigitCommand}" CommandParameter="9" />
+
+                        <KeyBinding Gesture="D0"     Command="{Binding EnterDigitCommand}" CommandParameter="0" />
+                        <KeyBinding Gesture="Delete" Command="{Binding EnterDigitCommand}" CommandParameter="0" />
+                        <KeyBinding Gesture="Back"   Command="{Binding EnterDigitCommand}" CommandParameter="0" />
+
+                        <!-- Escape wipes the cell entirely: digit and pencil
+                             marks. Delete only clears the digit. -->
+                        <KeyBinding Gesture="Escape" Command="{Binding ResetCellCommand}" />
+
+                        <!-- Shift+digit notes without switching modes. -->
+                        <KeyBinding Gesture="Shift+D1" Command="{Binding NoteDigitCommand}" CommandParameter="1" />
+                        <KeyBinding Gesture="Shift+D2" Command="{Binding NoteDigitCommand}" CommandParameter="2" />
+                        <KeyBinding Gesture="Shift+D3" Command="{Binding NoteDigitCommand}" CommandParameter="3" />
+                        <KeyBinding Gesture="Shift+D4" Command="{Binding NoteDigitCommand}" CommandParameter="4" />
+                        <KeyBinding Gesture="Shift+D5" Command="{Binding NoteDigitCommand}" CommandParameter="5" />
+                        <KeyBinding Gesture="Shift+D6" Command="{Binding NoteDigitCommand}" CommandParameter="6" />
+                        <KeyBinding Gesture="Shift+D7" Command="{Binding NoteDigitCommand}" CommandParameter="7" />
+                        <KeyBinding Gesture="Shift+D8" Command="{Binding NoteDigitCommand}" CommandParameter="8" />
+                        <KeyBinding Gesture="Shift+D9" Command="{Binding NoteDigitCommand}" CommandParameter="9" />
+                    </Border.KeyBindings>
                     <Grid>
                         <ItemsControl ItemsSource="{Binding Cells}">
                             <ItemsControl.ItemsPanel>
@@ -114,13 +157,15 @@
                                          $parent[ItemsControl] reaches past the cell
                                          to the window's DataContext, where the
                                          command lives. -->
-                                    <!-- Focusable=False is load-bearing. A focusable
-                                         button steals keyboard focus when clicked,
-                                         and arrow keys would then walk focus around
-                                         the 81 cells instead of reaching the window's
-                                         KeyBindings. Clicks still work without focus. -->
+                                    <!-- Focusable so that clicking a cell moves focus
+                                         INTO the board, which is what activates the
+                                         board's KeyBindings above. Arrow keys do not
+                                         wander between cells because those bindings
+                                         consume them first.
+
+                                         IsTabStop=False keeps Tab from walking
+                                         through all 81 of them. -->
                                     <Button Classes="cell"
-                                            Focusable="False"
                                             IsTabStop="False"
                                             Classes.selected="{Binding IsSelected}"
                                             Classes.conflict="{Binding IsConflicted}"
@@ -133,9 +178,28 @@
                                             <TextBlock Classes="digit"
                                                        Classes.given="{Binding IsGiven}"
                                                        Text="{Binding Display}" />
-                                            <TextBlock Classes="candidates"
-                                                       Text="{Binding Candidates}"
-                                                       IsVisible="{Binding !!Candidates.Length}" />
+
+                                            <!-- The notes grid. Nine fixed slots,
+                                                 shown or hidden individually, so a
+                                                 digit never moves as marks change:
+                                                 5 is always dead centre. -->
+                                            <ItemsControl ItemsSource="{Binding Notes}"
+                                                          IsVisible="{Binding HasNotes}"
+                                                          Margin="4">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <UniformGrid Rows="3" Columns="3" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:CellNote">
+                                                        <TextBlock Classes="note"
+                                                                   Classes.userMark="{Binding IsUserMark}"
+                                                                   Text="{Binding Text}"
+                                                                   IsVisible="{Binding Shown}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                         </Panel>
                                     </Button>
                                 </DataTemplate>
@@ -168,8 +232,31 @@
                             <TextBlock Text="PUZZLE" Classes="sectionHeader" Margin="2,0,0,2" />
                             <TextBox Classes="name" Text="{Binding BoardName}"
                                      Watermark="Name this puzzle" />
-                            <Button Classes="action" Command="{Binding TogglePlayCommand}"
-                                    Content="{Binding ModeLabel}" />
+                            <!-- The icon follows the label: a play triangle while
+                                 you are still typing the puzzle in, a pencil once
+                                 you are playing and the button offers to go back. -->
+                            <Button Classes="action" Command="{Binding TogglePlayCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="btnIcon" Data="{StaticResource PlayIcon}"
+                                          Fill="{Binding $parent[Button].Foreground}"
+                                          IsVisible="{Binding IsEditingGivens}" />
+                                    <Path Classes="btnIcon" Data="{StaticResource PencilIcon}"
+                                          Fill="{Binding $parent[Button].Foreground}"
+                                          IsVisible="{Binding !IsEditingGivens}" />
+                                    <TextBlock Text="{Binding ModeLabel}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Classes="action" Command="{Binding TogglePencilCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="btnIcon" Data="{StaticResource PencilIcon}"
+                                          Fill="{Binding $parent[Button].Foreground}" />
+                                    <TextBlock Text="{Binding PencilLabel}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock FontSize="11" TextWrapping="Wrap" Margin="2,0,0,0"
+                                       Foreground="{DynamicResource SubtleTextBrush}"
+                                       Text="Shift+digit notes without leaving placement mode." />
                         </StackPanel>
                     </Border>
 
@@ -177,12 +264,50 @@
                         <StackPanel Spacing="8">
                             <TextBlock Text="ASK THE ENGINE" Classes="sectionHeader"
                                        Margin="2,0,0,2" />
-                            <Button Classes="action primary" Command="{Binding HintCommand}"
-                                    Content="Hint" />
-                            <Button Classes="action" Command="{Binding CheckCommand}"
-                                    Content="Is there a solution?" />
-                            <Button Classes="action" Command="{Binding SolveCommand}"
-                                    Content="Solve it" />
+                            <Button Classes="action primary" Command="{Binding HintCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="btnIcon" Data="{StaticResource HintIcon}"
+                                          Fill="{Binding $parent[Button].Foreground}" />
+                                    <TextBlock Text="Hint" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="action" Command="{Binding CheckCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="btnIcon" Data="{StaticResource SearchIcon}"
+                                          Fill="{Binding $parent[Button].Foreground}" />
+                                    <TextBlock Text="Is there a solution?" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="action" Command="{Binding SolveCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="btnIcon" Data="{StaticResource SolveIcon}"
+                                          Fill="{Binding $parent[Button].Foreground}" />
+                                    <TextBlock Text="Solve it" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="action" Command="{Binding AuditMarksCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="btnIcon" Data="{StaticResource AuditIcon}"
+                                          Fill="{Binding $parent[Button].Foreground}" />
+                                    <TextBlock Text="Check my pencil marks" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Completion announces itself; there is nothing to press.
+                         PlacementBrush is the "this is the answer" colour in
+                         every palette, so success looks the same here as it
+                         does on the board. -->
+                    <Border Classes="card" Margin="0,12,0,0"
+                            IsVisible="{Binding IsSolved}"
+                            Background="{DynamicResource PlacementBrush}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="COMPLETE" Classes="sectionHeader" Margin="0"
+                                       Foreground="{DynamicResource GivenTextBrush}" />
+                            <TextBlock Text="{Binding CompletionMessage}" TextWrapping="Wrap"
+                                       FontWeight="SemiBold" LineHeight="19"
+                                       Foreground="{DynamicResource GivenTextBrush}" />
                         </StackPanel>
                     </Border>
 
@@ -199,13 +324,30 @@
                     <Border Classes="card" Margin="0,12,0,0">
                         <StackPanel Spacing="8">
                             <TextBlock Text="BOARD" Classes="sectionHeader" Margin="2,0,0,2" />
-                            <Button Classes="action primary" Command="{Binding SaveCommand}"
-                                    Content="Save" />
+                            <Button Classes="action primary" Command="{Binding SaveCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Path Classes="btnIcon" Data="{StaticResource SaveIcon}"
+                                          Fill="{Binding $parent[Button].Foreground}" />
+                                    <TextBlock Text="Save" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
                             <Grid ColumnDefinitions="*,8,*">
                                 <Button Grid.Column="0" Classes="action"
-                                        Command="{Binding NewCommand}" Content="New" />
+                                        Command="{Binding NewCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                        <Path Classes="btnIcon" Data="{StaticResource NewIcon}"
+                                              Fill="{Binding $parent[Button].Foreground}" />
+                                        <TextBlock Text="New" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                                 <Button Grid.Column="2" Classes="action"
-                                        Command="{Binding ClearCommand}" Content="Clear" />
+                                        Command="{Binding ClearCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                        <Path Classes="btnIcon" Data="{StaticResource ResetIcon}"
+                                              Fill="{Binding $parent[Button].Foreground}" />
+                                        <TextBlock Text="Clear" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -230,13 +372,29 @@
                                                            Foreground="{DynamicResource SubtleTextBrush}"
                                                            Text="{Binding FilledCount, StringFormat='{}{0} digits placed'}" />
                                             </StackPanel>
-                                            <Button Grid.Column="1" Classes="chip" Content="Load"
-                                                    Margin="6,0"
+                                            <Button Grid.Column="1" Classes="chip" Margin="6,0"
                                                     Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).LoadCommand}"
-                                                    CommandParameter="{Binding}" />
-                                            <Button Grid.Column="2" Classes="chip" Content="Delete"
+                                                    CommandParameter="{Binding}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Path Classes="btnIcon chipIcon"
+                                                          Data="{StaticResource LoadIcon}"
+                                                          Fill="{Binding $parent[Button].Foreground}" />
+                                                    <TextBlock Text="Load" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                            <!-- Delete keeps its label. An icon-only
+                                                 destructive control is how people
+                                                 remove the wrong thing. -->
+                                            <Button Grid.Column="2" Classes="chip"
                                                     Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteCommand}"
-                                                    CommandParameter="{Binding}" />
+                                                    CommandParameter="{Binding}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Path Classes="btnIcon chipIcon"
+                                                          Data="{StaticResource DeleteIcon}"
+                                                          Fill="{Binding $parent[Button].Foreground}" />
+                                                    <TextBlock Text="Delete" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
                                         </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>

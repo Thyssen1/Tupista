@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <Platforms>x64</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\app\Tupista.ViewModels\Tupista.ViewModels.csproj" />
+    <ProjectReference Include="..\..\..\bindings\dotnet\Tupista.Interop\Tupista.Interop.csproj" />
+  </ItemGroup>
+
+  <!-- The engine has to sit next to the test binary too, for the same reason
+       the app needs it: these tests call into it. Same approach as
+       Tupista.Desktop — build the C++ first, then stage the library. -->
+  <PropertyGroup>
+    <TupistaRepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\'))</TupistaRepoRoot>
+    <TupistaNativeBuildDir Condition="'$(TupistaNativeBuildDir)' == '' And Exists('$(TupistaRepoRoot)out\CMakeCache.txt')">$(TupistaRepoRoot)out</TupistaNativeBuildDir>
+    <TupistaNativeBuildDir Condition="'$(TupistaNativeBuildDir)' == '' And Exists('$(TupistaRepoRoot)cmake-build-debug\CMakeCache.txt')">$(TupistaRepoRoot)cmake-build-debug</TupistaNativeBuildDir>
+  </PropertyGroup>
+
+  <Target Name="StageNativeEngine" AfterTargets="Build">
+    <Exec Command="cmake --build &quot;$(TupistaNativeBuildDir)&quot;"
+          Condition="'$(TupistaNativeBuildDir)' != ''"
+          ContinueOnError="true" StandardOutputImportance="low" />
+    <ItemGroup>
+      <TupistaNativeFiles Include="$(TupistaRepoRoot)artifacts\native\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(TupistaNativeFiles)" DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true" Condition="'@(TupistaNativeFiles)' != ''" />
+  </Target>
+
+</Project>

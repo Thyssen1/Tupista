@@ -68,7 +68,11 @@
     <!-- ContinueOnError: a missing or broken CMake should not block the C#
          build outright. If the library really is absent, the warning below
          says so in plain language. -->
-    <Exec Command="cmake --build &quot;$(TupistaNativeBuildDir)&quot; --target tupista_capi"
+    <!-- Builds every CMake target, not just tupista_capi. Slightly slower, but
+         it means the C++ unit tests are compiled too — so a mistake in engine
+         code shows up as a build error when you build the solution, and
+         sudoku_tests.exe is always current for the test run configuration. -->
+    <Exec Command="cmake --build &quot;$(TupistaNativeBuildDir)&quot;"
           Condition="'$(TupistaNativeBuildDir)' != ''"
           ContinueOnError="true" StandardOutputImportance="low" />
 

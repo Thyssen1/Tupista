@@ -24,6 +24,10 @@ public sealed class MainViewModel : ObservableObject
     private bool _showCandidates;
     private long _currentBoardId;
     private AppTheme _theme;
+    private AppPalette _palette;
+    private bool _isPencilMode;
+    private bool _isSolved;
+    private string _completionMessage = string.Empty;
 
     // The hint currently on screen, and how much of it has been revealed.
     // Pressing Hint again escalates rather than fetching a new one — the rule
@@ -62,6 +66,16 @@ public sealed class MainViewModel : ObservableObject
         // Parsing it here keeps the markup free of type-conversion ceremony.
         SelectCommand = new RelayCommand<CellViewModel>(Select);
         MoveCommand = new RelayCommand<string>(Move);
+        ResetCellCommand = new RelayCommand(ResetSelectedCell);
+        TogglePencilCommand = new RelayCommand(() => IsPencilMode = !IsPencilMode);
+        AuditMarksCommand = new RelayCommand(AuditMarks);
+
+        // Shift+digit notes a digit without leaving placement mode — the same
+        // key, one modifier, so a single note does not cost two mode switches.
+        NoteDigitCommand = new RelayCommand<string>(text =>
+        {
+            if (int.TryParse(text, out var digit)) ToggleMark(digit);
+        });
         EnterDigitCommand = new RelayCommand<string>(text =>
         {
             if (int.TryParse(text, out var digit)) EnterDigit(digit);
@@ -71,12 +85,15 @@ public sealed class MainViewModel : ObservableObject
         // then overwritten, so the first frame is already correct — no flash of
         // the wrong theme while something catches up.
         _theme = Enum.TryParse<AppTheme>(_repository.GetSetting(ThemeSettingKey, nameof(AppTheme.System)),
-                                        out var stored) ? stored : AppTheme.System;
+                                        out var storedTheme) ? storedTheme : AppTheme.System;
+        _palette = Enum.TryParse<AppPalette>(_repository.GetSetting(PaletteSettingKey, nameof(AppPalette.InkVermilion)),
+                                        out var storedPalette) ? storedPalette : AppPalette.InkVermilion;
 
         RefreshSavedBoards();
     }
 
     private const string ThemeSettingKey = "theme";
+    private const string PaletteSettingKey = "palette";
 
     public IReadOnlyList<CellViewModel> Cells { get; }
 
@@ -96,6 +113,23 @@ public sealed class MainViewModel : ObservableObject
             _repository.SetSetting(ThemeSettingKey, value.ToString());
         }
     }
+
+    /// <summary>The choices offered in Settings; also the ComboBox's items.</summary>
+    public IReadOnlyList<AppPalette> PaletteOptions { get; } = Enum.GetValues<AppPalette>();
+
+    /// <summary>
+    /// Colour scheme, remembered between runs and orthogonal to
+    /// <see cref="Theme"/>. The view watches this and swaps its resources.
+    /// </summary>
+    public AppPalette Palette
+    {
+        get => _palette;
+        set
+        {
+            if (!Set(ref _palette, value)) return;
+            _repository.SetSetting(PaletteSettingKey, value.ToString());
+        }
+    }
     public ObservableCollection<SavedBoard> SavedBoards { get; } = [];
 
     public RelayCommand SolveCommand { get; }
@@ -110,6 +144,54 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand<CellViewModel> SelectCommand { get; }
     public RelayCommand<string> MoveCommand { get; }
     public RelayCommand<string> EnterDigitCommand { get; }
+    public RelayCommand ResetCellCommand { get; }
+    public RelayCommand TogglePencilCommand { get; }
+    public RelayCommand AuditMarksCommand { get; }
+    public RelayCommand<string> NoteDigitCommand { get; }
+
+    /// <summary>
+    /// While on, typing a digit notes it instead of placing it.
+    ///
+    /// A mode rather than only a modifier because note-taking comes in bursts:
+    /// you pencil a whole row at once. Shift+digit stays available for one-offs.
+    /// </summary>
+    public bool IsPencilMode
+    {
+        get => _isPencilMode;
+        set
+        {
+            if (!Set(ref _isPencilMode, value)) return;
+            Raise(nameof(PencilLabel));
+            Status = value
+                ? "Pencil mode: digits are noted, not placed."
+                : "Placing digits.";
+        }
+    }
+
+    public string PencilLabel => IsPencilMode ? "Pencil: on" : "Pencil: off";
+
+    /// <summary>
+    /// The grid is full and legal — the puzzle is finished.
+    ///
+    /// Nothing to press: a puzzle you have just completed should say so by
+    /// itself. Making someone ask whether they have won is the sort of thing
+    /// that makes an app feel unfinished.
+    ///
+    /// Full plus legal really is correct here. Every puzzle the app will solve
+    /// or hint on has been checked for a unique solution, so there is only one
+    /// way to fill it legally.
+    /// </summary>
+    public bool IsSolved
+    {
+        get => _isSolved;
+        private set => Set(ref _isSolved, value);
+    }
+
+    public string CompletionMessage
+    {
+        get => _completionMessage;
+        private set => Set(ref _completionMessage, value);
+    }
 
     public string Status
     {
@@ -209,14 +291,139 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
+        // In pencil mode a digit is a note, not a placement. Never while
+        // entering the puzzle itself: givens are facts, not guesses.
+        if (IsPencilMode && !IsEditingGivens && digit != 0)
+        {
+            ToggleMark(digit);
+            return;
+        }
+
         Selected.Value = digit;
+        // Committing to a digit makes this cell's own notes moot. Notes in
+        // OTHER cells are left alone deliberately — silently tidying them would
+        // do the player's thinking for them and make the mark audit pointless.
+        if (digit != 0) Selected.Marks = 0;
         if (IsEditingGivens) Selected.IsGiven = digit != 0;
 
         // Any edit invalidates the hint on screen: it was reasoning about a
         // board that no longer exists.
+        BoardChanged();
+    }
+
+    /// <summary>
+    /// Put the selected cell back to how it started: no digit, no pencil marks.
+    ///
+    /// Broader than typing 0, which only clears the digit. Once marks are
+    /// editable this is the difference between "I got that number wrong" and
+    /// "forget everything I thought about this cell".
+    ///
+    /// A given is left alone while playing, for the same reason it cannot be
+    /// typed over: it is the puzzle, not your work.
+    /// </summary>
+    private void ResetSelectedCell()
+    {
+        if (!IsEditingGivens && Selected.IsGiven)
+        {
+            Status = "That digit is part of the puzzle and cannot be changed.";
+            return;
+        }
+
+        Selected.Value = 0;
+        Selected.Marks = 0;
+        if (IsEditingGivens) Selected.IsGiven = false;
+        Selected.RefreshNotes(0, ShowCandidates);
+
+        BoardChanged();
+    }
+
+    /// <summary>
+    /// Everything that has to happen after the grid changes, in one place.
+    ///
+    /// These four always belong together: a stale hint is about a board that no
+    /// longer exists, conflicts and notes must reflect what is on screen now,
+    /// and completion has to be noticed the instant it happens. Calling them
+    /// separately at seven call sites is how one of them ends up forgotten.
+    /// </summary>
+    private void BoardChanged()
+    {
         ClearHint();
         RefreshConflicts();
         RefreshCandidates();
+        CheckCompletion();
+    }
+
+    /// <summary>
+    /// Notice a finished puzzle. Says who finished it: being congratulated for
+    /// pressing "Solve it" would be hollow, and worse, misleading.
+    /// </summary>
+    private void CheckCompletion(bool byEngine = false)
+    {
+        var full = Cells.All(cell => cell.Value != 0);
+        IsSolved = full && SudokuEngine.Validate(CurrentBoard()).Count == 0;
+
+        if (!IsSolved)
+        {
+            CompletionMessage = string.Empty;
+            return;
+        }
+        var name = string.IsNullOrWhiteSpace(BoardName) ? "this puzzle" : $"\"{BoardName.Trim()}\"";
+        CompletionMessage = byEngine
+            ? $"{name} is complete — filled in by the engine."
+            : $"Solved! {name} is complete and every digit checks out.";
+    }
+
+    /// <summary>Add or remove one pencil mark in the selected cell.</summary>
+    public void ToggleMark(int digit)
+    {
+        if (digit is < 1 or > 9) return;
+        if (Selected.IsGiven || Selected.Value != 0)
+        {
+            Status = "That cell already has a digit.";
+            return;
+        }
+
+        Selected.Marks ^= (ushort)(1 << digit);
+        RefreshCandidates();
+    }
+
+    /// <summary>
+    /// Compare the player's notes against what the board actually allows.
+    ///
+    /// The one feature that reads the marks at all. Stale marks matter more
+    /// than missing ones: a mark that a later placement has ruled out makes a
+    /// cell look more open than it is, so the player never revisits it.
+    /// </summary>
+    private void AuditMarks()
+    {
+        var marks = Marks();
+        if (marks.All(mask => mask == 0))
+        {
+            Status = "No pencil marks to check yet.";
+            return;
+        }
+
+        var report = SudokuEngine.AuditMarks(CurrentBoard(), marks);
+        if (report.Count == 0)
+        {
+            Status = "Every pencil mark is correct.";
+            return;
+        }
+
+        var stale = report.Count(entry => entry.Stale.Count > 0);
+        var missing = report.Count(entry => entry.Missing.Count > 0);
+
+        ClearHighlights();
+        foreach (var entry in report)
+            Cells[entry.Cell.Row * 9 + entry.Cell.Col].Highlight =
+                entry.Stale.Count > 0 ? CellHighlight.Eliminated : CellHighlight.Pattern;
+
+        var first = report[0];
+        var detail = first.Stale.Count > 0
+            ? $"R{first.Cell.Row + 1}C{first.Cell.Col + 1} still notes {string.Join(", ", first.Stale)}, no longer possible"
+            : $"R{first.Cell.Row + 1}C{first.Cell.Col + 1} is missing {string.Join(", ", first.Missing)}";
+
+        Status = $"{stale} cell(s) with stale marks, {missing} with missing ones. {detail}.";
     }
 
     // --- commands -----------------------------------------------------------
@@ -253,9 +460,9 @@ public sealed class MainViewModel : ObservableObject
             if (Cells[i].Value == 0 && digit > 0) Cells[i].Value = digit;
         }
 
-        ClearHint();
-        RefreshConflicts();
-        RefreshCandidates();
+        BoardChanged();
+
+        CheckCompletion(byEngine: true);
 
         Status = result.Solved
             ? $"Solved using {result.TierName} (tier {result.Tier}) in {result.Placements.Count} steps."
@@ -303,11 +510,10 @@ public sealed class MainViewModel : ObservableObject
         {
             if (cell.IsGiven && !IsEditingGivens) continue;   // keep the puzzle, drop the work
             cell.Value = 0;
+            cell.Marks = 0;
             if (IsEditingGivens) cell.IsGiven = false;
         }
-        ClearHint();
-        RefreshConflicts();
-        RefreshCandidates();
+        BoardChanged();
         Status = IsEditingGivens ? "Board cleared." : "Your entries were cleared.";
     }
 
@@ -319,11 +525,10 @@ public sealed class MainViewModel : ObservableObject
         foreach (var cell in Cells)
         {
             cell.Value = 0;
+            cell.Marks = 0;
             cell.IsGiven = false;
         }
-        ClearHint();
-        RefreshConflicts();
-        RefreshCandidates();
+        BoardChanged();
         Status = "New puzzle. Type the givens, then press Play.";
     }
 
@@ -347,6 +552,7 @@ public sealed class MainViewModel : ObservableObject
             var current = board.Current[i] - '0';
             Cells[i].IsGiven = given > 0;
             Cells[i].Value = current > 0 ? current : 0;
+            Cells[i].Marks = i < board.Marks.Length ? board.Marks[i] : (ushort)0;
         }
 
         _currentBoardId = board.Id;
@@ -355,9 +561,7 @@ public sealed class MainViewModel : ObservableObject
         Raise(nameof(IsEditingGivens));
         Raise(nameof(ModeLabel));
 
-        ClearHint();
-        RefreshConflicts();
-        RefreshCandidates();
+        BoardChanged();
         Status = $"Loaded \"{board.Name}\".";
     }
 
@@ -390,9 +594,13 @@ public sealed class MainViewModel : ObservableObject
             span[i] = cells[i].IsGiven ? (char)('0' + cells[i].Value) : '0';
     });
 
-    // Pencil marks are stored and round-tripped but not yet editable in the UI;
-    // the audit feature is what will drive them.
-    private static ushort[] Marks() => new ushort[81];
+    /// <summary>Pencil marks, row-major, for saving alongside the grid.</summary>
+    private ushort[] Marks()
+    {
+        var marks = new ushort[81];
+        for (var i = 0; i < 81; i++) marks[i] = Cells[i].Marks;
+        return marks;
+    }
 
     private void LockGivens()
     {
@@ -444,23 +652,28 @@ public sealed class MainViewModel : ObservableObject
                 Cells[cell.Row * 9 + cell.Col].IsConflicted = true;
     }
 
+    /// <summary>
+    /// Rebuild the small digits in every cell: the player's pencil marks where
+    /// they have made any, otherwise the engine's candidates when those are
+    /// switched on.
+    ///
+    /// Runs even when candidates are hidden, because marks still have to be
+    /// drawn. Candidates always come from the engine, computed from placed
+    /// digits — the UI never invents them, so what you see is exactly what the
+    /// hint engine is reasoning about.
+    /// </summary>
     private void RefreshCandidates()
     {
-        if (!ShowCandidates)
-        {
-            foreach (var cell in Cells) cell.Candidates = string.Empty;
-            return;
-        }
-
-        // Candidates always come from the engine, computed from placed digits.
-        // The UI never invents them, so what is shown is exactly what the hint
-        // engine is reasoning about.
         var masks = SudokuEngine.Candidates(CurrentBoard());
+
         for (var i = 0; i < 81; i++)
         {
+            Cells[i].RefreshNotes(masks[i], ShowCandidates);
+
             var digits = new List<char>();
-            for (var digit = 1; digit <= 9; digit++)
-                if ((masks[i] & (1 << digit)) != 0) digits.Add((char)('0' + digit));
+            if (ShowCandidates)
+                for (var digit = 1; digit <= 9; digit++)
+                    if ((masks[i] & (1 << digit)) != 0) digits.Add((char)('0' + digit));
             Cells[i].Candidates = new string(digits.ToArray());
         }
     }

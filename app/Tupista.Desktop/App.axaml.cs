@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -21,12 +23,27 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = new MainViewModel(),
-            };
+            var viewModel = new MainViewModel();
+
+            // Apply the saved palette before the window is built, so the first
+            // frame is already right rather than flashing the default.
+            PaletteLoader.Apply(this, viewModel.Palette);
+
+            // Light/dark is a binding on the window; the palette is not, because
+            // swapping a ResourceDictionary is not something a binding can do.
+            // Watching the property here is the smallest bridge that keeps the
+            // view model free of Avalonia.
+            viewModel.PropertyChanged += OnViewModelChanged;
+
+            desktop.MainWindow = new MainWindow { DataContext = viewModel };
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.Palette) && sender is MainViewModel viewModel)
+            PaletteLoader.Apply(this, viewModel.Palette);
     }
 }

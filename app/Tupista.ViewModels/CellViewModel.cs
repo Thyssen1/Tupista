@@ -20,18 +20,61 @@ public enum CellHighlight
 /// on every change would work but would throw away focus and selection each
 /// time, which makes keyboard entry unusable.
 /// </summary>
-public sealed class CellViewModel(int row, int col) : ObservableObject
+public sealed class CellViewModel : ObservableObject
 {
+    public CellViewModel(int row, int col)
+    {
+        Row = row;
+        Col = col;
+        Index = row * 9 + col;
+
+        var notes = new CellNote[9];
+        for (var digit = 1; digit <= 9; digit++) notes[digit - 1] = new CellNote(digit);
+        Notes = notes;
+    }
+
+    /// <summary>
+    /// The nine note slots, in digit order. Always present, individually shown
+    /// or hidden — see <see cref="CellNote"/>.
+    /// </summary>
+    public IReadOnlyList<CellNote> Notes { get; }
+
+    /// <summary>Is anything worth drawing in the notes grid right now?</summary>
+    public bool HasNotes => Value == 0 && Notes.Any(note => note.Shown);
+
+    /// <summary>
+    /// Work out which small digits to show.
+    ///
+    /// The player's own marks win over the engine's candidates: if you have
+    /// written notes in a cell, that is what you want to see, even when they
+    /// are wrong. Showing the engine's answer instead would quietly correct you
+    /// and make the mark audit pointless.
+    /// </summary>
+    public void RefreshNotes(ushort candidates, bool showCandidates)
+    {
+        var userHasMarks = Marks != 0;
+        foreach (var note in Notes)
+        {
+            var bit = 1 << note.Digit;
+            note.IsUserMark = userHasMarks;
+            note.Shown = Value == 0 && (userHasMarks
+                ? (Marks & bit) != 0
+                : showCandidates && (candidates & bit) != 0);
+        }
+        Raise(nameof(HasNotes));
+    }
+
     private int _value;
     private bool _isGiven;
     private bool _isSelected;
     private bool _isConflicted;
     private CellHighlight _highlight;
     private string _candidates = string.Empty;
+    private ushort _marks;
 
-    public int Row { get; } = row;
-    public int Col { get; } = col;
-    public int Index { get; } = row * 9 + col;
+    public int Row { get; }
+    public int Col { get; }
+    public int Index { get; }
 
     /// <summary>0 when empty, otherwise 1-9.</summary>
     public int Value
@@ -39,7 +82,9 @@ public sealed class CellViewModel(int row, int col) : ObservableObject
         get => _value;
         set
         {
-            if (Set(ref _value, value)) Raise(nameof(Display));
+            if (!Set(ref _value, value)) return;
+            Raise(nameof(Display));
+            Raise(nameof(HasNotes));   // a filled cell hides its notes
         }
     }
 
@@ -86,6 +131,17 @@ public sealed class CellViewModel(int row, int col) : ObservableObject
     {
         get => _candidates;
         set => Set(ref _candidates, value);
+    }
+
+    /// <summary>
+    /// The player's own pencil marks, as a bitmask: bit n means digit n was
+    /// noted here. Stored and saved already; entering them in the UI is still
+    /// to come. The solver never reads these.
+    /// </summary>
+    public ushort Marks
+    {
+        get => _marks;
+        set => Set(ref _marks, value);
     }
 
     /// <summary>What the view actually prints: empty rather than a literal "0".</summary>
