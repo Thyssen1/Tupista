@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>  // std::size_t
 #include <functional>
 #include <utility>
 

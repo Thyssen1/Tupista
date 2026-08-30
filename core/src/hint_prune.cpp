@@ -1,6 +1,7 @@
 #include "hint_prune.hpp"
 
 #include <algorithm>
+#include <cstddef>  // std::size_t
 
 #include "sudoku/candidates.hpp"
 #include "sudoku/units.hpp"

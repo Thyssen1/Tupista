@@ -1,5 +1,7 @@
 #include "sudoku/audit.hpp"
 
+#include <utility>  // std::move
+
 #include "sudoku/candidates.hpp"
 
 namespace sudoku {

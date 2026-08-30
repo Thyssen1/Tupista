@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstddef>  // std::size_t
 #include <utility>
 
 #include "hint_prune.hpp"

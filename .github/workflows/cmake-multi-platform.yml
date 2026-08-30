@@ -1,0 +1,76 @@
+# Builds the core library and runs the test suite on every platform we claim to
+# support.
+#
+# The point of this workflow is NOT "CI is good practice". It is that Tupista's
+# whole architecture rests on one promise — the C++ core is platform-free, so it
+# can later ship inside an iOS app. Until something compiles it with Apple Clang
+# on macOS, that promise is untested. The macos leg below is the one that earns
+# its keep; the others are cheap insurance.
+name: CMake on multiple platforms
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      # Keep going when one platform fails, so a red macOS build still tells us
+      # whether Linux and Windows are fine. That difference is usually the first
+      # clue about what broke.
+      fail-fast: false
+
+      # One row per configuration, written out in full.
+      #
+      # The GitHub starter workflow builds this as a cross product of os and
+      # compiler and then excludes the nonsense combinations, which is compact
+      # but hard to read. Four explicit rows say the same thing plainly.
+      #
+      # Windows passes no compiler argument on purpose: the default generator
+      # there is Visual Studio, which finds MSVC by itself. Naming a compiler as
+      # well is how that configuration usually goes wrong.
+      matrix:
+        include:
+          - name: linux-gcc
+            os: ubuntu-latest
+            cmake_args: "-DCMAKE_CXX_COMPILER=g++"
+          - name: linux-clang
+            os: ubuntu-latest
+            cmake_args: "-DCMAKE_CXX_COMPILER=clang++"
+          - name: macos-clang
+            os: macos-latest
+            cmake_args: "-DCMAKE_CXX_COMPILER=clang++"
+          - name: windows-msvc
+            os: windows-latest
+            cmake_args: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # bash on every platform, including Windows, so one script works
+      # everywhere instead of a PowerShell variant for one row.
+      - name: Configure
+        shell: bash
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }}
+
+      # Both CMAKE_BUILD_TYPE (above) and --config (here) are needed, because
+      # they apply to different kinds of generator: Makefiles and Ninja bake the
+      # build type in at configure time and ignore --config, while Visual Studio
+      # is multi-config and decides at build time, ignoring CMAKE_BUILD_TYPE.
+      # Passing both is what makes one workflow cover both.
+      - name: Build
+        shell: bash
+        run: cmake --build build --config Release
+
+      # --output-on-failure matters: without it a failing assertion shows up as
+      # nothing but a red X and an exit code, and you have to reproduce locally
+      # to find out which of the ~945 assertions broke.
+      - name: Test
+        shell: bash
+        working-directory: build
+        run: ctest --build-config Release --output-on-failure
