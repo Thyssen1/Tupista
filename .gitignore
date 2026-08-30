@@ -9,3 +9,9 @@ artifacts/
 # .NET build output
 bin/
 obj/
+
+# Release artefacts: produced by `dotnet publish` and packed for a GitHub
+# Release. Regenerable, and a few hundred files of Avalonia binaries that
+# would otherwise show up as unversioned every time you cut a release.
+publish/
+*.zip

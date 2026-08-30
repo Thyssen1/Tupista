@@ -3,28 +3,50 @@
 Notable changes to Tupista. Format follows [Keep a Changelog](https://keepachangelog.com);
 versioning follows [Semantic Versioning](https://semver.org).
 
-Everything so far is pre-release: there are no users yet, so it all sits under
-Unreleased until the first Avalonia desktop build ships. Entries here describe
-what changed for someone USING the engine — internal refactors belong in the
-git history, not in this file.
+Entries here describe what changed for someone USING Tupista — internal
+refactors belong in the git history, not in this file.
 
-## [Unreleased]
+## [1.0.0] - 2026-08-30
+
+First release: a desktop Sudoku assistant that explains its hints instead of
+just handing over answers.
 
 ### Added
-- `Board` value type with an 81-character import/export format, and validation
-  of duplicate digits in rows, columns and boxes.
-- Backtracking solver and a capped `countSolutions`, giving ground truth and a
-  uniqueness check.
-- Human technique ladder, tiers 1-7: singles, pointing/claiming, naked and
-  hidden pairs and triples, X-Wing, XY-Wing, XY-Chain. Difficulty is reported
-  as the hardest tier required; puzzles beyond the ladder report as such.
-- `nextHint`: one next human step, with the chain of enabling eliminations that
-  makes it true from the player's own view of the board, at three disclosure
-  levels (vague, mechanism, full).
-- Hint chains are pruned to the deductions a placement genuinely depends on,
-  rather than everything the engine happened to try along the way.
-- Pencil marks on cells, and `auditPencilMarks` reporting marks that are
-  missing or that later placements have made stale. Marks are never used for
-  solving.
-- C ABI (`core/capi`, `tupista.h`) for host applications, built both as a
-  shared library for desktop and a static library for iOS.
+
+**Hints that show their working.** `nextHint` returns one next human step
+together with the chain of eliminations that makes it true from what you can
+actually see on your own board — never "naked single at R9C5" when your pencil
+marks still show three candidates there. The chain is pruned to the deductions
+the placement genuinely rests on, and is revealed in three stages: where to
+look, then the mechanism, then the answer. The full step is never shown
+unprompted.
+
+**A human technique ladder, tiers 1-7.** Singles, pointing and claiming, naked
+and hidden pairs and triples, X-Wing, XY-Wing and XY-Chain. Difficulty is
+reported as the hardest tier a puzzle required; puzzles beyond the ladder say
+so rather than guessing.
+
+**Validation before advice.** Every hint checks the grid first. A board with
+duplicate digits reports exactly which cells clash, and one without a single
+unique solution says so — because a hint about an ambiguous grid would be
+guesswork.
+
+**Pencil marks and a mark audit.** Note candidates with the Pencil toggle or
+Shift+digit, shown as a 3x3 mini-grid so each digit keeps a fixed position.
+"Check my pencil marks" compares your notes against the board and flags the
+ones that are missing, or that a later placement has quietly made stale. The
+solver never reads your marks — a slip in them can't poison a hint.
+
+**A desktop app.** Keyboard-first board entry with separate puzzle-entry and
+playing modes, so the puzzle can't be edited by accident once you start.
+Solve, difficulty rating, solution counting, and completion that announces
+itself. Puzzles and preferences are saved to SQLite.
+
+**Four colour schemes**, each with a light and a dark variant, chosen
+independently in Settings and remembered between runs.
+
+### Notes
+
+The Sudoku engine is C++20 with no platform dependencies, reachable through a C
+ABI, and is verified on GCC, Clang, Apple Clang and MSVC. That is groundwork
+for an iOS version later; this release is Windows desktop only.

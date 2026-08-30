@@ -89,4 +89,22 @@
              Text="No native engine in artifacts/native. Build the C++ core first: cmake --build out" />
   </Target>
 
+  <!-- Publish builds its own file list rather than copying the build output,
+       so the target above does not reach it: `dotnet publish` produced an app
+       with no engine, which fails at the first call with a DllNotFound.
+       ComputeFilesToPublish is where that list is assembled, so the native
+       library is added to it explicitly. -->
+  <Target Name="PublishNativeEngine" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <TupistaPublishNative Include="$(TupistaRepoRoot)artifacts\native\*" />
+      <ResolvedFileToPublish Include="@(TupistaPublishNative)">
+        <RelativePath>%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+
+    <Warning Condition="'@(TupistaPublishNative)' == ''"
+             Text="Publishing without a native engine. Build the C++ core first: cmake --build out" />
+  </Target>
+
 </Project>
