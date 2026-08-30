@@ -17,6 +17,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Writes compile_commands.json into the build directory: a list of the exact
+# compiler command used for every source file. IDEs and clang tooling read it
+# to get real analysis (completion, go-to-definition, correct include paths)
+# without having to understand our CMake themselves.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Core is a static library for tests and for iOS later 
 add_subdirectory(core)
 

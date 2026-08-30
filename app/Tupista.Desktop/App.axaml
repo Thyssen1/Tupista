@@ -1,0 +1,221 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:Tupista.Desktop"
+             x:Class="Tupista.Desktop.App">
+
+    <Application.Resources>
+        <ResourceDictionary>
+
+            <!--
+                ThemeDictionaries is how one set of names produces two palettes.
+                A control asking for {DynamicResource CellBrush} gets whichever
+                entry matches the theme variant in force where it sits — so
+                flipping the window's variant repaints everything, with no code
+                and no second copy of the layout.
+
+                DynamicResource, not StaticResource: static is resolved once at
+                load time and would never notice the switch.
+            -->
+            <ResourceDictionary.ThemeDictionaries>
+
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="SurfaceBrush"        Color="#F4F5F7" />
+                    <SolidColorBrush x:Key="PanelBrush"          Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="PanelBorderBrush"    Color="#E3E6EB" />
+                    <SolidColorBrush x:Key="CellBrush"           Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="CellBorderBrush"     Color="#D9DDE4" />
+                    <SolidColorBrush x:Key="CellHoverBrush"      Color="#EDF3FF" />
+                    <SolidColorBrush x:Key="GridLineBrush"       Color="#2A3038" />
+                    <SolidColorBrush x:Key="GivenTextBrush"      Color="#11151B" />
+                    <SolidColorBrush x:Key="UserTextBrush"       Color="#2C6BED" />
+                    <SolidColorBrush x:Key="SubtleTextBrush"     Color="#6B7280" />
+                    <SolidColorBrush x:Key="CandidateTextBrush"  Color="#9AA2AE" />
+                    <SolidColorBrush x:Key="AccentBrush"         Color="#2C6BED" />
+                    <SolidColorBrush x:Key="AccentHoverBrush"    Color="#1F5AD4" />
+                    <SolidColorBrush x:Key="AccentTextBrush"     Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ButtonBrush"         Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ButtonHoverBrush"    Color="#F0F3F8" />
+                    <SolidColorBrush x:Key="ButtonBorderBrush"   Color="#D3D8E0" />
+                    <SolidColorBrush x:Key="ConflictBrush"       Color="#FFDADA" />
+                    <SolidColorBrush x:Key="PlacementBrush"      Color="#CFEFD8" />
+                    <SolidColorBrush x:Key="PatternBrush"        Color="#FFF0C4" />
+                    <SolidColorBrush x:Key="EliminatedBrush"     Color="#FBE2E2" />
+                    <SolidColorBrush x:Key="HintPanelBrush"      Color="#EEF4FF" />
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="SurfaceBrush"        Color="#14171C" />
+                    <SolidColorBrush x:Key="PanelBrush"          Color="#1C2027" />
+                    <SolidColorBrush x:Key="PanelBorderBrush"    Color="#2C323B" />
+                    <SolidColorBrush x:Key="CellBrush"           Color="#22272F" />
+                    <SolidColorBrush x:Key="CellBorderBrush"     Color="#333A45" />
+                    <SolidColorBrush x:Key="CellHoverBrush"      Color="#2C3543" />
+                    <SolidColorBrush x:Key="GridLineBrush"       Color="#9AA3B0" />
+                    <SolidColorBrush x:Key="GivenTextBrush"      Color="#F1F4F8" />
+                    <SolidColorBrush x:Key="UserTextBrush"       Color="#74AEFF" />
+                    <SolidColorBrush x:Key="SubtleTextBrush"     Color="#9AA3B0" />
+                    <SolidColorBrush x:Key="CandidateTextBrush"  Color="#707A88" />
+                    <SolidColorBrush x:Key="AccentBrush"         Color="#4A87F5" />
+                    <SolidColorBrush x:Key="AccentHoverBrush"    Color="#6199F7" />
+                    <SolidColorBrush x:Key="AccentTextBrush"     Color="#0B0E12" />
+                    <SolidColorBrush x:Key="ButtonBrush"         Color="#262C35" />
+                    <SolidColorBrush x:Key="ButtonHoverBrush"    Color="#303844" />
+                    <SolidColorBrush x:Key="ButtonBorderBrush"   Color="#3A424E" />
+                    <SolidColorBrush x:Key="ConflictBrush"       Color="#5C2A2A" />
+                    <SolidColorBrush x:Key="PlacementBrush"      Color="#234C2F" />
+                    <SolidColorBrush x:Key="PatternBrush"        Color="#4B4020" />
+                    <SolidColorBrush x:Key="EliminatedBrush"     Color="#4B2828" />
+                    <SolidColorBrush x:Key="HintPanelBrush"      Color="#1E2733" />
+                </ResourceDictionary>
+
+            </ResourceDictionary.ThemeDictionaries>
+
+            <local:ThemeVariantConverter x:Key="ThemeConverter" />
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <!-- ============================ buttons ============================ -->
+        <!--
+            Corner radius, generous padding and a visible hover state are what
+            separate "a button" from "a rectangle with a word in it". Defined
+            once here so every screen inherits the same feel.
+        -->
+        <Style Selector="Button.action">
+            <Setter Property="Background" Value="{DynamicResource ButtonBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <!-- /template/ reaches inside the control's own template. Fluent paints
+             its background on the inner ContentPresenter, so setting it on the
+             Button alone is silently ignored on hover. -->
+        <Style Selector="Button.action:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
+        </Style>
+        <Style Selector="Button.action:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ButtonBorderBrush}" />
+        </Style>
+
+        <!-- The one button per group that carries the main intent. -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.primary /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+        </Style>
+
+        <!-- Small pill buttons for the saved-puzzle rows. -->
+        <Style Selector="Button.chip">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="12,5" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Button.chip:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}" />
+        </Style>
+
+        <!-- ============================ the grid ============================ -->
+        <Style Selector="Button.cell">
+            <Setter Property="Background" Value="{DynamicResource CellBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CellBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="58" />
+            <Setter Property="Height" Value="58" />
+        </Style>
+        <Style Selector="Button.cell /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource CellBrush}" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+        <Style Selector="Button.cell:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource CellHoverBrush}" />
+        </Style>
+
+        <!-- Order matters: later rules win, so a conflict shows through a hint
+             highlight, and the selection outline sits on top of everything. -->
+        <Style Selector="Button.cell.eliminated /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource EliminatedBrush}" />
+        </Style>
+        <Style Selector="Button.cell.pattern /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource PatternBrush}" />
+        </Style>
+        <Style Selector="Button.cell.placement /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource PlacementBrush}" />
+        </Style>
+        <Style Selector="Button.cell.conflict /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ConflictBrush}" />
+        </Style>
+        <Style Selector="Button.cell.selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderThickness" Value="3" />
+        </Style>
+
+        <Style Selector="TextBlock.digit">
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="{DynamicResource UserTextBrush}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.digit.given">
+            <Setter Property="Foreground" Value="{DynamicResource GivenTextBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="TextBlock.candidates">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Foreground" Value="{DynamicResource CandidateTextBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="MaxWidth" Value="46" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- ============================ chrome ============================= -->
+        <Style Selector="TextBlock.sectionHeader">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource SubtleTextBrush}" />
+            <Setter Property="Margin" Value="2,14,0,6" />
+        </Style>
+
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+
+        <Style Selector="TextBox.name">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="10,8" />
+        </Style>
+    </Application.Styles>
+
+</Application>

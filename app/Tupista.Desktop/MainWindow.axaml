@@ -1,0 +1,251 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Tupista.ViewModels"
+        xmlns:storage="using:Tupista.Storage"
+        x:Class="Tupista.Desktop.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Tupista" Width="1040" Height="760"
+        MinWidth="960" MinHeight="680"
+        Background="{DynamicResource SurfaceBrush}"
+        RequestedThemeVariant="{Binding Theme, Converter={StaticResource ThemeConverter}}">
+
+    <!--
+        Theme switching with no code-behind: the window's own theme variant is
+        bound to the view model, and every colour in the app comes from a
+        DynamicResource that resolves per variant. Changing the setting
+        repaints the whole tree.
+
+        Keyboard input is bindings too. A keystroke invokes a command exactly
+        like a button click, which is what keeps MainWindow.axaml.cs empty.
+        CommandParameter is always a string, hence the parsing in the view model.
+    -->
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Up"    Command="{Binding MoveCommand}" CommandParameter="up" />
+        <KeyBinding Gesture="Down"  Command="{Binding MoveCommand}" CommandParameter="down" />
+        <KeyBinding Gesture="Left"  Command="{Binding MoveCommand}" CommandParameter="left" />
+        <KeyBinding Gesture="Right" Command="{Binding MoveCommand}" CommandParameter="right" />
+
+        <KeyBinding Gesture="D1" Command="{Binding EnterDigitCommand}" CommandParameter="1" />
+        <KeyBinding Gesture="D2" Command="{Binding EnterDigitCommand}" CommandParameter="2" />
+        <KeyBinding Gesture="D3" Command="{Binding EnterDigitCommand}" CommandParameter="3" />
+        <KeyBinding Gesture="D4" Command="{Binding EnterDigitCommand}" CommandParameter="4" />
+        <KeyBinding Gesture="D5" Command="{Binding EnterDigitCommand}" CommandParameter="5" />
+        <KeyBinding Gesture="D6" Command="{Binding EnterDigitCommand}" CommandParameter="6" />
+        <KeyBinding Gesture="D7" Command="{Binding EnterDigitCommand}" CommandParameter="7" />
+        <KeyBinding Gesture="D8" Command="{Binding EnterDigitCommand}" CommandParameter="8" />
+        <KeyBinding Gesture="D9" Command="{Binding EnterDigitCommand}" CommandParameter="9" />
+
+        <KeyBinding Gesture="NumPad1" Command="{Binding EnterDigitCommand}" CommandParameter="1" />
+        <KeyBinding Gesture="NumPad2" Command="{Binding EnterDigitCommand}" CommandParameter="2" />
+        <KeyBinding Gesture="NumPad3" Command="{Binding EnterDigitCommand}" CommandParameter="3" />
+        <KeyBinding Gesture="NumPad4" Command="{Binding EnterDigitCommand}" CommandParameter="4" />
+        <KeyBinding Gesture="NumPad5" Command="{Binding EnterDigitCommand}" CommandParameter="5" />
+        <KeyBinding Gesture="NumPad6" Command="{Binding EnterDigitCommand}" CommandParameter="6" />
+        <KeyBinding Gesture="NumPad7" Command="{Binding EnterDigitCommand}" CommandParameter="7" />
+        <KeyBinding Gesture="NumPad8" Command="{Binding EnterDigitCommand}" CommandParameter="8" />
+        <KeyBinding Gesture="NumPad9" Command="{Binding EnterDigitCommand}" CommandParameter="9" />
+
+        <KeyBinding Gesture="D0"     Command="{Binding EnterDigitCommand}" CommandParameter="0" />
+        <KeyBinding Gesture="Delete" Command="{Binding EnterDigitCommand}" CommandParameter="0" />
+        <KeyBinding Gesture="Back"   Command="{Binding EnterDigitCommand}" CommandParameter="0" />
+    </Window.KeyBindings>
+
+    <Grid RowDefinitions="Auto,*" Margin="20">
+
+        <!-- ============================== header ============================== -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="4,0,4,16">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12"
+                        VerticalAlignment="Center">
+                <TextBlock Text="Tupista" FontSize="24" FontWeight="Bold"
+                           Foreground="{DynamicResource GivenTextBrush}" />
+                <TextBlock Text="your hint" FontSize="13" VerticalAlignment="Bottom"
+                           Margin="0,0,0,4"
+                           Foreground="{DynamicResource SubtleTextBrush}" />
+            </StackPanel>
+
+            <!-- Settings lives in a Flyout: a popup declared inline, opened by
+                 its button with no handler and no second window to manage. -->
+            <Button Grid.Column="1" Classes="action" HorizontalAlignment="Right"
+                    Padding="14,8" Content="Settings">
+                <Button.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedRight">
+                        <StackPanel Width="230" Spacing="10" Margin="4">
+                            <TextBlock Text="SETTINGS" Classes="sectionHeader" Margin="0" />
+
+                            <TextBlock Text="Appearance" FontSize="12"
+                                       Foreground="{DynamicResource SubtleTextBrush}" />
+                            <ComboBox ItemsSource="{Binding ThemeOptions}"
+                                      SelectedItem="{Binding Theme}"
+                                      HorizontalAlignment="Stretch"
+                                      CornerRadius="10" />
+                            <TextBlock FontSize="11" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource SubtleTextBrush}"
+                                       Text="System follows your operating system setting. Your choice is remembered." />
+
+                            <Separator Margin="0,4" />
+
+                            <CheckBox IsChecked="{Binding ShowCandidates}"
+                                      Content="Show candidates in empty cells" />
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+        </Grid>
+
+        <!-- =============================== body =============================== -->
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
+
+            <Border Grid.Column="0" Classes="card" VerticalAlignment="Top"
+                    HorizontalAlignment="Left" Padding="18">
+                <Border BorderBrush="{DynamicResource GridLineBrush}" BorderThickness="2"
+                        CornerRadius="4" ClipToBounds="True">
+                    <Grid>
+                        <ItemsControl ItemsSource="{Binding Cells}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="9" Columns="9" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CellViewModel">
+                                    <!-- A Button because clicking a cell must raise
+                                         a command, and that is what a Button does.
+                                         $parent[ItemsControl] reaches past the cell
+                                         to the window's DataContext, where the
+                                         command lives. -->
+                                    <!-- Focusable=False is load-bearing. A focusable
+                                         button steals keyboard focus when clicked,
+                                         and arrow keys would then walk focus around
+                                         the 81 cells instead of reaching the window's
+                                         KeyBindings. Clicks still work without focus. -->
+                                    <Button Classes="cell"
+                                            Focusable="False"
+                                            IsTabStop="False"
+                                            Classes.selected="{Binding IsSelected}"
+                                            Classes.conflict="{Binding IsConflicted}"
+                                            Classes.placement="{Binding IsHintPlacement}"
+                                            Classes.pattern="{Binding IsHintPattern}"
+                                            Classes.eliminated="{Binding IsHintEliminated}"
+                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectCommand}"
+                                            CommandParameter="{Binding}">
+                                        <Panel>
+                                            <TextBlock Classes="digit"
+                                                       Classes.given="{Binding IsGiven}"
+                                                       Text="{Binding Display}" />
+                                            <TextBlock Classes="candidates"
+                                                       Text="{Binding Candidates}"
+                                                       IsVisible="{Binding !!Candidates.Length}" />
+                                        </Panel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- The 3x3 separators, drawn over the cells. Without them
+                             every boundary looks the same and the boxes vanish. -->
+                        <Grid IsHitTestVisible="False">
+                            <Rectangle Fill="{DynamicResource GridLineBrush}" Width="2" Height="522"
+                                       HorizontalAlignment="Left" Margin="173,0,0,0" />
+                            <Rectangle Fill="{DynamicResource GridLineBrush}" Width="2" Height="522"
+                                       HorizontalAlignment="Left" Margin="347,0,0,0" />
+                            <Rectangle Fill="{DynamicResource GridLineBrush}" Height="2" Width="522"
+                                       VerticalAlignment="Top" Margin="0,173,0,0" />
+                            <Rectangle Fill="{DynamicResource GridLineBrush}" Height="2" Width="522"
+                                       VerticalAlignment="Top" Margin="0,347,0,0" />
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Border>
+
+            <!-- ============================ side panel ============================ -->
+            <ScrollViewer Grid.Column="1" Margin="20,0,0,0"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="0">
+
+                    <Border Classes="card">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="PUZZLE" Classes="sectionHeader" Margin="2,0,0,2" />
+                            <TextBox Classes="name" Text="{Binding BoardName}"
+                                     Watermark="Name this puzzle" />
+                            <Button Classes="action" Command="{Binding TogglePlayCommand}"
+                                    Content="{Binding ModeLabel}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card" Margin="0,12,0,0">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="ASK THE ENGINE" Classes="sectionHeader"
+                                       Margin="2,0,0,2" />
+                            <Button Classes="action primary" Command="{Binding HintCommand}"
+                                    Content="Hint" />
+                            <Button Classes="action" Command="{Binding CheckCommand}"
+                                    Content="Is there a solution?" />
+                            <Button Classes="action" Command="{Binding SolveCommand}"
+                                    Content="Solve it" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card" Margin="0,12,0,0"
+                            IsVisible="{Binding !!HintText.Length}"
+                            Background="{DynamicResource HintPanelBrush}">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="HINT" Classes="sectionHeader" Margin="0" />
+                            <TextBlock Text="{Binding HintText}" TextWrapping="Wrap"
+                                       LineHeight="19" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card" Margin="0,12,0,0">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="BOARD" Classes="sectionHeader" Margin="2,0,0,2" />
+                            <Button Classes="action primary" Command="{Binding SaveCommand}"
+                                    Content="Save" />
+                            <Grid ColumnDefinitions="*,8,*">
+                                <Button Grid.Column="0" Classes="action"
+                                        Command="{Binding NewCommand}" Content="New" />
+                                <Button Grid.Column="2" Classes="action"
+                                        Command="{Binding ClearCommand}" Content="Clear" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" FontSize="12"
+                               LineHeight="18" Margin="4,14,4,0"
+                               Foreground="{DynamicResource SubtleTextBrush}" />
+
+                    <Border Classes="card" Margin="0,14,0,0">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="SAVED PUZZLES" Classes="sectionHeader" Margin="0" />
+                            <ListBox ItemsSource="{Binding SavedBoards}" MaxHeight="230"
+                                     Background="Transparent" BorderThickness="0"
+                                     Padding="0">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="storage:SavedBoard">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,3">
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold" FontSize="13" />
+                                                <TextBlock FontSize="11"
+                                                           Foreground="{DynamicResource SubtleTextBrush}"
+                                                           Text="{Binding FilledCount, StringFormat='{}{0} digits placed'}" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Classes="chip" Content="Load"
+                                                    Margin="6,0"
+                                                    Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).LoadCommand}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Grid.Column="2" Classes="chip" Content="Delete"
+                                                    Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>

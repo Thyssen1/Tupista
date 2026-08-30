@@ -1,0 +1,88 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Matches the rest of the solution; see Tupista.Interop for why.
+         Platforms lists what is available; Platform picks the default, so
+         "dotnet build Tupista.Desktop.csproj" lands in the same bin/x64/...
+         folder the solution build uses instead of a second bin/Debug tree. -->
+    <Platforms>x64</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tupista.ViewModels\Tupista.ViewModels.csproj" />
+  </ItemGroup>
+
+  <!-- ==================================================================== -->
+  <!-- Build the C++ engine as part of building the app.                    -->
+  <!--                                                                      -->
+  <!-- Without this the two halves drift silently: you change the engine,   -->
+  <!-- press Run, and the app loads yesterday's tupista.dll. The ABI check  -->
+  <!-- cannot catch that, because the version has not changed — only the    -->
+  <!-- behaviour has. That is a genuinely horrible bug to chase.            -->
+  <!--                                                                      -->
+  <!-- Which build directory? Whichever already exists: `out` (command      -->
+  <!-- line) or `cmake-build-debug` (Rider). Override with                  -->
+  <!-- -p:TupistaNativeBuildDir=... if you keep yours somewhere else.       -->
+  <!-- ==================================================================== -->
+  <PropertyGroup>
+    <!-- GetFullPath, not just "..\..\": MSBuild does not reliably expand item
+         wildcards through relative parent segments, so the glob below silently
+         matched nothing until this was normalised to an absolute path. -->
+    <TupistaRepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</TupistaRepoRoot>
+    <TupistaNativeBuildDir Condition="'$(TupistaNativeBuildDir)' == '' And Exists('$(TupistaRepoRoot)out\CMakeCache.txt')">$(TupistaRepoRoot)out</TupistaNativeBuildDir>
+    <TupistaNativeBuildDir Condition="'$(TupistaNativeBuildDir)' == '' And Exists('$(TupistaRepoRoot)cmake-build-debug\CMakeCache.txt')">$(TupistaRepoRoot)cmake-build-debug</TupistaNativeBuildDir>
+  </PropertyGroup>
+
+  <!-- Runs AFTER Build, not before.
+       Hooking BeforeBuild looks more natural but $(OutDir) is not settled that
+       early, so the copy quietly went nowhere. Nothing at compile time needs
+       the native library — it is loaded at run time — so staging it once the
+       output directory definitely exists is both simpler and correct.
+
+       Compile and copy in ONE target, on purpose.
+       Splitting them across two targets with AfterTargets on one and
+       BeforeTargets on the other gives MSBuild contradictory ordering
+       constraints, and it quietly resolves that by not running the second
+       target at all. A single target has nothing to get wrong.
+
+       The item glob lives inside the target rather than in a plain ItemGroup
+       because MSBuild expands globs before any target runs. On a fresh clone
+       artifacts/native does not exist yet, so a top-level glob would come back
+       empty and the first build would produce an app with no engine. -->
+  <Target Name="BuildNativeEngine" AfterTargets="Build">
+    <!-- ContinueOnError: a missing or broken CMake should not block the C#
+         build outright. If the library really is absent, the warning below
+         says so in plain language. -->
+    <Exec Command="cmake --build &quot;$(TupistaNativeBuildDir)&quot; --target tupista_capi"
+          Condition="'$(TupistaNativeBuildDir)' != ''"
+          ContinueOnError="true" StandardOutputImportance="low" />
+
+    <ItemGroup>
+      <TupistaNativeFiles Include="$(TupistaRepoRoot)artifacts\native\*" />
+    </ItemGroup>
+
+    <Message Importance="normal" Text="Tupista: staging @(TupistaNativeFiles->Count()) native file(s) into $(OutDir)" />
+
+    <Copy SourceFiles="@(TupistaNativeFiles)" DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true" Condition="'@(TupistaNativeFiles)' != ''" />
+
+    <Warning Condition="'@(TupistaNativeFiles)' == ''"
+             Text="No native engine in artifacts/native. Build the C++ core first: cmake --build out" />
+  </Target>
+
+</Project>

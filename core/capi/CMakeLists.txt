@@ -46,3 +46,12 @@ set_target_properties(tupista_capi_static PROPERTIES OUTPUT_NAME "tupista_static
 if(WIN32)
     set_target_properties(tupista_capi PROPERTIES PREFIX "")
 endif()
+
+# Put the shared library somewhere the .NET projects can find without knowing
+# which build directory produced it — there are several (Rider's, the command
+# line's, CI's) and they come and go. artifacts/native is gitignored; whichever
+# build ran last wins, which is what you want while developing.
+set_target_properties(tupista_capi PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/artifacts/native
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/artifacts/native
+)

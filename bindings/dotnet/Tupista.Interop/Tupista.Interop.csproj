@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net8.0 rather than net10.0: Avalonia's iOS support and the .NET iOS
+         workload are both most settled here, and this assembly is meant to be
+         shared with that head later. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- x64 only, deliberately. This assembly P/Invokes a 64-bit native
+         library, so a 32-bit build could never do anything but throw
+         BadImageFormatException at the first call. Offering the choice would
+         only let someone pick the broken one. -->
+    <Platforms>x64</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+
+    <!-- LibraryImport generates the marshalling code at compile time instead of
+         emitting IL at runtime. It needs unsafe blocks for the pointer work it
+         writes, and it warns loudly about anything it cannot marshal safely. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- NO native-library copy here, deliberately.
+       An earlier version staged tupista.dll through this project with a
+       <None CopyToOutputDirectory> item, and it actively fought the app: this
+       project's bin kept a cached copy, and because a C#-only rebuild leaves
+       that cache untouched, the STALE dll was copied over the app's fresh one
+       every time. The engine is staged once, by the app that runs it — see the
+       BuildNativeEngine target in Tupista.Desktop.csproj. -->
+
+</Project>

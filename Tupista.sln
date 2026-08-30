@@ -1,0 +1,123 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "bindings", "bindings", "{D683BF3D-D126-42E8-A222-A84F83186095}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dotnet", "dotnet", "{A98B7F18-ED53-EBCD-09F7-717690A67F95}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tupista.Interop", "bindings\dotnet\Tupista.Interop\Tupista.Interop.csproj", "{4878AF8C-C122-49F7-8915-F31C8EF63ACB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "app", "app", "{F95F473B-E98A-ACD6-1986-755F447BE36F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tupista.Storage", "app\Tupista.Storage\Tupista.Storage.csproj", "{A912F52C-0B40-4EB5-B343-5D44B8962DA5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tupista.ViewModels", "app\Tupista.ViewModels\Tupista.ViewModels.csproj", "{BC076773-D5A3-4756-A759-E6A109E4E240}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tupista.Desktop", "app\Tupista.Desktop\Tupista.Desktop.csproj", "{2E66297A-7D7E-43EF-B0B2-64BE174C7AFD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "engine (C++)", "engine (C++)", "{1A1B2C3D-0001-4E5F-9A0B-000000000001}"
+	ProjectSection(SolutionItems) = preProject
+		core\CMakeLists.txt = core\CMakeLists.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "include", "include", "{1A1B2C3D-0002-4E5F-9A0B-000000000002}"
+	ProjectSection(SolutionItems) = preProject
+		core\include\sudoku\audit.hpp = core\include\sudoku\audit.hpp
+		core\include\sudoku\board.hpp = core\include\sudoku\board.hpp
+		core\include\sudoku\candidates.hpp = core\include\sudoku\candidates.hpp
+		core\include\sudoku\hint.hpp = core\include\sudoku\hint.hpp
+		core\include\sudoku\human_solver.hpp = core\include\sudoku\human_solver.hpp
+		core\include\sudoku\rules.hpp = core\include\sudoku\rules.hpp
+		core\include\sudoku\solver.hpp = core\include\sudoku\solver.hpp
+		core\include\sudoku\technique.hpp = core\include\sudoku\technique.hpp
+		core\include\sudoku\units.hpp = core\include\sudoku\units.hpp
+		core\include\sudoku\validate.hpp = core\include\sudoku\validate.hpp
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{1A1B2C3D-0003-4E5F-9A0B-000000000003}"
+	ProjectSection(SolutionItems) = preProject
+		core\src\audit.cpp = core\src\audit.cpp
+		core\src\board.cpp = core\src\board.cpp
+		core\src\candidates.cpp = core\src\candidates.cpp
+		core\src\hint.cpp = core\src\hint.cpp
+		core\src\hint_prune.cpp = core\src\hint_prune.cpp
+		core\src\hint_prune.hpp = core\src\hint_prune.hpp
+		core\src\human_solver.cpp = core\src\human_solver.cpp
+		core\src\logic_solver.cpp = core\src\logic_solver.cpp
+		core\src\logic_solver.hpp = core\src\logic_solver.hpp
+		core\src\rules.cpp = core\src\rules.cpp
+		core\src\solver.cpp = core\src\solver.cpp
+		core\src\technique.cpp = core\src\technique.cpp
+		core\src\units.cpp = core\src\units.cpp
+		core\src\validate.cpp = core\src\validate.cpp
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "capi", "capi", "{1A1B2C3D-0004-4E5F-9A0B-000000000004}"
+	ProjectSection(SolutionItems) = preProject
+		core\capi\CMakeLists.txt = core\capi\CMakeLists.txt
+		core\capi\include\tupista.h = core\capi\include\tupista.h
+		core\capi\src\tupista.cpp = core\capi\src\tupista.cpp
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests (C++)", "tests (C++)", "{1A1B2C3D-0005-4E5F-9A0B-000000000005}"
+	ProjectSection(SolutionItems) = preProject
+		tests\CMakeLists.txt = tests\CMakeLists.txt
+		tests\src\AuditTests.cpp = tests\src\AuditTests.cpp
+		tests\src\BoardTests.cpp = tests\src\BoardTests.cpp
+		tests\src\CapiTests.cpp = tests\src\CapiTests.cpp
+		tests\src\Fixtures.hpp = tests\src\Fixtures.hpp
+		tests\src\HintTests.cpp = tests\src\HintTests.cpp
+		tests\src\HumanSolverTests.cpp = tests\src\HumanSolverTests.cpp
+		tests\src\main.cpp = tests\src\main.cpp
+		tests\src\SolverTests.cpp = tests\src\SolverTests.cpp
+		tests\src\ValidateTests.cpp = tests\src\ValidateTests.cpp
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "repo", "repo", "{1A1B2C3D-0006-4E5F-9A0B-000000000006}"
+	ProjectSection(SolutionItems) = preProject
+		CMakeLists.txt = CMakeLists.txt
+		.gitignore = .gitignore
+		ChangeLog = ChangeLog
+		.github\workflows\cmake-multi-platform.yml = .github\workflows\cmake-multi-platform.yml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4878AF8C-C122-49F7-8915-F31C8EF63ACB}.Debug|x64.ActiveCfg = Debug|x64
+		{4878AF8C-C122-49F7-8915-F31C8EF63ACB}.Debug|x64.Build.0 = Debug|x64
+		{4878AF8C-C122-49F7-8915-F31C8EF63ACB}.Release|x64.ActiveCfg = Release|x64
+		{4878AF8C-C122-49F7-8915-F31C8EF63ACB}.Release|x64.Build.0 = Release|x64
+		{A912F52C-0B40-4EB5-B343-5D44B8962DA5}.Debug|x64.ActiveCfg = Debug|x64
+		{A912F52C-0B40-4EB5-B343-5D44B8962DA5}.Debug|x64.Build.0 = Debug|x64
+		{A912F52C-0B40-4EB5-B343-5D44B8962DA5}.Release|x64.ActiveCfg = Release|x64
+		{A912F52C-0B40-4EB5-B343-5D44B8962DA5}.Release|x64.Build.0 = Release|x64
+		{BC076773-D5A3-4756-A759-E6A109E4E240}.Debug|x64.ActiveCfg = Debug|x64
+		{BC076773-D5A3-4756-A759-E6A109E4E240}.Debug|x64.Build.0 = Debug|x64
+		{BC076773-D5A3-4756-A759-E6A109E4E240}.Release|x64.ActiveCfg = Release|x64
+		{BC076773-D5A3-4756-A759-E6A109E4E240}.Release|x64.Build.0 = Release|x64
+		{2E66297A-7D7E-43EF-B0B2-64BE174C7AFD}.Debug|x64.ActiveCfg = Debug|x64
+		{2E66297A-7D7E-43EF-B0B2-64BE174C7AFD}.Debug|x64.Build.0 = Debug|x64
+		{2E66297A-7D7E-43EF-B0B2-64BE174C7AFD}.Release|x64.ActiveCfg = Release|x64
+		{2E66297A-7D7E-43EF-B0B2-64BE174C7AFD}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A98B7F18-ED53-EBCD-09F7-717690A67F95} = {D683BF3D-D126-42E8-A222-A84F83186095}
+		{4878AF8C-C122-49F7-8915-F31C8EF63ACB} = {A98B7F18-ED53-EBCD-09F7-717690A67F95}
+		{A912F52C-0B40-4EB5-B343-5D44B8962DA5} = {F95F473B-E98A-ACD6-1986-755F447BE36F}
+		{BC076773-D5A3-4756-A759-E6A109E4E240} = {F95F473B-E98A-ACD6-1986-755F447BE36F}
+		{2E66297A-7D7E-43EF-B0B2-64BE174C7AFD} = {F95F473B-E98A-ACD6-1986-755F447BE36F}
+		{1A1B2C3D-0002-4E5F-9A0B-000000000002} = {1A1B2C3D-0001-4E5F-9A0B-000000000001}
+		{1A1B2C3D-0003-4E5F-9A0B-000000000003} = {1A1B2C3D-0001-4E5F-9A0B-000000000001}
+		{1A1B2C3D-0004-4E5F-9A0B-000000000004} = {1A1B2C3D-0001-4E5F-9A0B-000000000001}
+		{1A1B2C3D-0005-4E5F-9A0B-000000000005} = {1A1B2C3D-0001-4E5F-9A0B-000000000001}
+	EndGlobalSection
+EndGlobal

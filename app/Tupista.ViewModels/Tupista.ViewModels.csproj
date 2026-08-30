@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Matches the rest of the solution; see Tupista.Interop for why. -->
+    <Platforms>x64</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+  </PropertyGroup>
+
+  <!-- NOTE THE ABSENCE OF A UI FRAMEWORK REFERENCE.
+       This project knows nothing about Avalonia. That is the whole point: when
+       the iOS head arrives it reuses this unchanged, and only the views get
+       written twice. If a using-directive for Avalonia ever appears here,
+       something has gone wrong. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\bindings\dotnet\Tupista.Interop\Tupista.Interop.csproj" />
+    <ProjectReference Include="..\Tupista.Storage\Tupista.Storage.csproj" />
+  </ItemGroup>
+
+</Project>
