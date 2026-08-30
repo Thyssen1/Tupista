@@ -9,6 +9,8 @@ add_library(sudoku_core STATIC
     src/logic_solver.cpp
     src/human_solver.cpp
     src/hint.cpp
+    src/hint_prune.cpp
+    src/audit.cpp
 )
 
 target_include_directories(sudoku_core PUBLIC
@@ -20,3 +22,6 @@ if(MSVC)
 else()
     target_compile_options(sudoku_core PRIVATE -Wall -Wextra)
 endif()
+
+# The C ABI that hosts (Avalonia now, iOS later) actually link against.
+add_subdirectory(capi)

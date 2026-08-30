@@ -1,0 +1,30 @@
+# Changelog
+
+Notable changes to Tupista. Format follows [Keep a Changelog](https://keepachangelog.com);
+versioning follows [Semantic Versioning](https://semver.org).
+
+Everything so far is pre-release: there are no users yet, so it all sits under
+Unreleased until the first Avalonia desktop build ships. Entries here describe
+what changed for someone USING the engine — internal refactors belong in the
+git history, not in this file.
+
+## [Unreleased]
+
+### Added
+- `Board` value type with an 81-character import/export format, and validation
+  of duplicate digits in rows, columns and boxes.
+- Backtracking solver and a capped `countSolutions`, giving ground truth and a
+  uniqueness check.
+- Human technique ladder, tiers 1-7: singles, pointing/claiming, naked and
+  hidden pairs and triples, X-Wing, XY-Wing, XY-Chain. Difficulty is reported
+  as the hardest tier required; puzzles beyond the ladder report as such.
+- `nextHint`: one next human step, with the chain of enabling eliminations that
+  makes it true from the player's own view of the board, at three disclosure
+  levels (vague, mechanism, full).
+- Hint chains are pruned to the deductions a placement genuinely depends on,
+  rather than everything the engine happened to try along the way.
+- Pencil marks on cells, and `auditPencilMarks` reporting marks that are
+  missing or that later placements have made stale. Marks are never used for
+  solving.
+- C ABI (`core/capi`, `tupista.h`) for host applications, built both as a
+  shared library for desktop and a static library for iOS.

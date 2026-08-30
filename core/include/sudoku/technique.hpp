@@ -4,6 +4,7 @@
 #include <string_view>
 #include <vector>
 
+#include "sudoku/candidates.hpp"
 #include "sudoku/units.hpp"
 
 namespace sudoku {
@@ -59,8 +60,23 @@ struct Finding {
     std::vector<int> digits;        // the digits the pattern is about
     UnitKind unit{};                // the unit it was found in...
     int unitIndex = -1;             // ...or -1 when the pattern spans units
-                                    // (X-Wing, XY-Wing, XY-Chain)
+                                    // (X-Wing, XY-Wing, XY-Chain). For those,
+                                    // `unit` still records the orientation the
+                                    // pattern was read in.
     std::vector<Elimination> eliminations;
+
+    // What each pattern cell held at the moment the pattern was spotted,
+    // parallel to `pattern`.
+    //
+    // Needed because a pattern is not just "these cells" — it is "these cells
+    // WITH these candidates". A naked pair on {3,5} is only a naked pair while
+    // both cells are down to 3 and 5. Recording that lets the hint pruner work
+    // out which earlier eliminations a pattern actually depended on, instead of
+    // dragging the whole history along.
+    // Filled in by the engine when the finding is recorded, so the technique
+    // call sites leave it out of their initialiser lists; the explicit default
+    // below is what keeps -Wmissing-field-initializers quiet about that.
+    std::vector<DigitSet> patternDigits = {};
 };
 
 }

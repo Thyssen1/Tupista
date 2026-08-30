@@ -1,14 +1,25 @@
 #include "sudoku/hint.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <utility>
 
+#include "hint_prune.hpp"
 #include "logic_solver.hpp"
 #include "sudoku/solver.hpp"
 
 namespace sudoku {
 
 namespace {
+
+// Technique names are stored lower case ("naked pair") because they usually
+// appear mid-sentence. These strings are shown to players, so a sentence that
+// starts with one still has to look like a sentence.
+std::string capitalize(std::string text) {
+    if (!text.empty())
+        text[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(text[0])));
+    return text;
+}
 
 std::string joinDigits(const std::vector<int>& digits) {
     std::string out;
@@ -109,9 +120,13 @@ Hint nextHint(const Board& board) {
     while (solver.eliminateOnce()) {
         if (const auto single = solver.findSingle()) {
             hint.status = HintStatus::Ok;
-            hint.eliminations = std::move(solver.findings);
             hint.placement = *single;
             hint.hasPlacement = true;
+
+            // The raw log is honest but unusable: the ladder applies whatever
+            // it finds first, so most of it has nothing to do with the answer.
+            // Keep only the steps the placement actually rests on.
+            hint.eliminations = detail::pruneChain(board, solver.findings, *single);
             return hint;
         }
     }
@@ -171,7 +186,7 @@ std::string describe(const Hint& hint, HintLevel level) {
                    joinDigits(first.digits) + ".";
 
         case HintLevel::Mechanism:
-            return std::string(nameOf(first.technique)) + " on " +
+            return capitalize(std::string(nameOf(first.technique))) + " on " +
                    (first.digits.size() == 1 ? "digit " : "digits ") +
                    joinDigits(first.digits) + " in " + whereToLook(first) +
                    " rules candidates out elsewhere. " +
@@ -184,7 +199,8 @@ std::string describe(const Hint& hint, HintLevel level) {
             std::string out;
             for (std::size_t i = 0; i < hint.eliminations.size(); ++i) {
                 const Finding& finding = hint.eliminations[i];
-                out += std::to_string(i + 1) + ". " + std::string(nameOf(finding.technique)) +
+                out += std::to_string(i + 1) + ". " +
+                       capitalize(std::string(nameOf(finding.technique))) +
                        " on " + joinDigits(finding.digits) + " at " +
                        joinCells(finding.pattern);
                 if (finding.unitIndex >= 0)

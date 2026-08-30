@@ -1,6 +1,9 @@
 #include <doctest/doctest.h>
 
+#include <algorithm>
+#include <cctype>
 #include <string>
+#include <vector>
 
 #include "Fixtures.hpp"
 #include "sudoku/board.hpp"
@@ -40,6 +43,72 @@ bool chainJustifiesPlacement(const Board& board, const Hint& hint) {
             ++spots;
     }
     return spots == 1;
+}
+
+// Is every step of the chain derivable at the moment it is used?
+//
+// Written independently of the pruner rather than calling its own helper: this
+// re-derives each technique's precondition from first principles, so a pruner
+// that drops an enabling step gets caught here instead of agreeing with itself.
+//
+// Two families of precondition:
+//   cell-based  (naked sets, XY-Wing, XY-Chain) — the pattern cells must hold
+//               exactly the candidates the finding was recorded with
+//   unit-based  (pointing, claiming, hidden sets, X-Wing) — the digits must
+//               have no home in the unit outside the pattern
+bool isCellBased(Technique technique) {
+    switch (technique) {
+        case Technique::NakedPair:
+        case Technique::NakedTriple:
+        case Technique::XYWing:
+        case Technique::XYChain: return true;
+        default: return false;
+    }
+}
+
+bool chainIsSelfContained(const Board& board, const std::vector<Finding>& chain) {
+    Candidates state = Candidates::compute(board);
+
+    for (const Finding& finding : chain) {
+        if (isCellBased(finding.technique)) {
+            if (finding.patternDigits.size() != finding.pattern.size()) return false;
+            for (std::size_t i = 0; i < finding.pattern.size(); ++i) {
+                const CellRef cell = finding.pattern[i];
+                if (state.at(cell.row, cell.col) != finding.patternDigits[i]) return false;
+            }
+        } else {
+            // Which unit(s) does the claim cover? Normally the one recorded on
+            // the finding; an X-Wing covers both of its base lines.
+            std::vector<int> lines;
+            if (finding.technique == Technique::XWing) {
+                for (const CellRef& cell : finding.pattern) {
+                    const int line = finding.unit == UnitKind::Row ? cell.row : cell.col;
+                    if (std::find(lines.begin(), lines.end(), line) == lines.end())
+                        lines.push_back(line);
+                }
+            } else {
+                if (finding.unitIndex < 0) return false;
+                lines.push_back(finding.unitIndex);
+            }
+
+            for (int line : lines) {
+                for (int slot = 0; slot < kGridSize; ++slot) {
+                    const CellRef cell = unitCell(finding.unit, line, slot);
+                    if (board.valueAt(cell.row, cell.col) != 0) continue;
+                    if (std::find(finding.pattern.begin(), finding.pattern.end(), cell) !=
+                        finding.pattern.end())
+                        continue;
+                    for (int digit : finding.digits)
+                        if (state.has(cell.row, cell.col, digit)) return false;
+                }
+            }
+        }
+
+        for (const Elimination& cut : finding.eliminations)
+            state.remove(cut.row, cut.col, cut.digit);
+    }
+
+    return true;
 }
 
 }
@@ -157,7 +226,12 @@ TEST_CASE("escalating disclosure gives away more at each level") {
     // The vague level points somewhere without naming the technique or the
     // answer; only the full level may reveal the placement.
     CHECK(vague.find("Look at") != std::string::npos);
-    CHECK(mechanism.find(std::string(nameOf(hint.eliminations.front().technique))) !=
+    // Technique names are stored lower case but capitalised at the start of a
+    // sentence, so compare case-insensitively.
+    std::string lowered = mechanism;
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    CHECK(lowered.find(std::string(nameOf(hint.eliminations.front().technique))) !=
           std::string::npos);
     CHECK(full.find(cellName({hint.placement.row, hint.placement.col})) != std::string::npos);
     CHECK(vague.find(cellName({hint.placement.row, hint.placement.col})) == std::string::npos);
@@ -193,6 +267,60 @@ TEST_CASE("a position beyond the ladder reports stuck, not nonsense") {
     CHECK(hint.status == HintStatus::Stuck);
     CHECK_FALSE(hint.hasPlacement);
     CHECK(describe(hint, HintLevel::Full).find("beyond the techniques") != std::string::npos);
+}
+
+TEST_CASE("every hint chain is self-contained") {
+    // The property that makes a hint honest: each step must be derivable from
+    // the player's own board plus the steps shown before it. If pruning ever
+    // drops an enabling deduction, this fails.
+    for (const auto& fixture : fixtures::kRegressions) {
+        CAPTURE(fixture.name);
+        const Board board = boardFrom(fixture.puzzle);
+        const Hint hint = nextHint(board);
+        if (hint.status != HintStatus::Ok) continue;
+        CHECK(chainIsSelfContained(board, hint.eliminations));
+    }
+}
+
+TEST_CASE("chains stay self-contained all the way through a solve") {
+    Board board = boardFrom(fixtures::kPuzzle);
+    while (!board.full()) {
+        const Hint hint = nextHint(board);
+        REQUIRE(hint.status == HintStatus::Ok);
+        REQUIRE(chainIsSelfContained(board, hint.eliminations));
+        REQUIRE(chainJustifiesPlacement(board, hint));
+
+        board.at(hint.placement.row, hint.placement.col).value =
+            static_cast<std::uint8_t>(hint.placement.value);
+        board.at(hint.placement.row, hint.placement.col).kind = CellKind::User;
+    }
+    CHECK(board.toString() == fixtures::kPuzzleSolved);
+}
+
+TEST_CASE("pruning keeps chains short enough to be worth reading") {
+    // Before pruning these were 9, 8 and 6 steps of mostly irrelevant work.
+    // The bound is deliberately loose: it guards against the chain creeping
+    // back to "apply everything the ladder found", not against small changes.
+    const int expected[] = {4, -1, 5, 3, -1};
+
+    for (int i = 0; i < 5; ++i) {
+        const auto& fixture = fixtures::kRegressions[i];
+        CAPTURE(fixture.name);
+        const Hint hint = nextHint(boardFrom(fixture.puzzle));
+        if (expected[i] < 0) continue;
+        CHECK(static_cast<int>(hint.eliminations.size()) == expected[i]);
+        CHECK(hint.eliminations.size() <= 6);
+    }
+}
+
+TEST_CASE("every kept step contributes something") {
+    // No step may be dead weight: each one must remove at least one candidate.
+    for (const auto& fixture : fixtures::kRegressions) {
+        CAPTURE(fixture.name);
+        const Hint hint = nextHint(boardFrom(fixture.puzzle));
+        for (const Finding& finding : hint.eliminations)
+            CHECK_FALSE(finding.eliminations.empty());
+    }
 }
 
 TEST_CASE("cell and unit names are 1-based") {

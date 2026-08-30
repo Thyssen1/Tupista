@@ -12,7 +12,7 @@ CellRef unitCell(UnitKind unit, int unitIndex, int slot) {
     return {};
 }
 
-UnitKind unitKindAt(int flat UnitIndex) {
+UnitKind unitKindAt(int flatUnitIndex) {
     if (flatUnitIndex < kGridSize) return UnitKind::Row;
     if (flatUnitIndex < 2 * kGridSize) return UnitKind::Col;
     return UnitKind::Box;

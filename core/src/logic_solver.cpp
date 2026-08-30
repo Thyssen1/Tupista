@@ -18,6 +18,21 @@ bool LogicSolver::solved() const { return board.full(); }
 void LogicSolver::bumpTier(int tier) { if (tier > maxTier) maxTier = tier; }
 
 bool LogicSolver::record(Finding finding) {
+    // Capture what each pattern cell held when the pattern was spotted.
+    //
+    // Call sites apply their eliminations just before calling us, so current
+    // candidates are already one step stale. The only difference is this
+    // finding's own eliminations, so putting those digits back reconstructs
+    // the pre-elimination state exactly — and keeps the snapshot in one place
+    // instead of spread across nine call sites.
+    finding.patternDigits.reserve(finding.pattern.size());
+    for (const CellRef& cell : finding.pattern) {
+        DigitSet held = cand.at(cell.row, cell.col);
+        for (const Elimination& cut : finding.eliminations)
+            if (cut.row == cell.row && cut.col == cell.col) held.set(cut.digit);
+        finding.patternDigits.push_back(held);
+    }
+
     bumpTier(tierOf(finding.technique));
     findings.push_back(std::move(finding));
     return stopAfterFinding();
@@ -400,8 +415,12 @@ bool LogicSolver::xWing() {
                         for (int m : lines[i])
                             pattern.push_back(base == 0 ? CellRef{line, m} : CellRef{m, line});
 
+                    // `unit` carries the orientation rather than a unit index:
+                    // Row means the two base lines were rows. The hint pruner
+                    // needs that to know which lines the pattern depends on.
                     changed = true;
-                    if (record({Technique::XWing, pattern, {digit}, UnitKind::Row, -1, cuts}))
+                    if (record({Technique::XWing, pattern, {digit},
+                                base == 0 ? UnitKind::Row : UnitKind::Col, -1, cuts}))
                         return true;
                 }
             }

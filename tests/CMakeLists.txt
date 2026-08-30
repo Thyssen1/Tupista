@@ -12,6 +12,8 @@ add_executable(sudoku_tests
         src/SolverTests.cpp
         src/HumanSolverTests.cpp
         src/HintTests.cpp
+        src/AuditTests.cpp
+        src/CapiTests.cpp
 )
 
 # Linking sudoku_core also inherits its PUBLIC include directory (that is how
@@ -19,8 +21,12 @@ add_executable(sudoku_tests
 # the doctest project exports; linking it supplies the header path for
 # #include <doctest/doctest.h>. PRIVATE = these are implementation details of
 # the test exe; nothing links against a test exe anyway.
+# The static flavour of the C ABI, so the boundary is exercised by the same
+# test run. Linking the static one keeps the test executable free of a DLL
+# copying step; the shared one is what the Avalonia app will load.
 target_link_libraries(sudoku_tests PRIVATE
         sudoku_core
+        tupista_capi_static
         doctest::doctest
 )
 
