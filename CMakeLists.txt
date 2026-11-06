@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 # Tell CMake we only need a C++ compiler
-project(Tupista VERSION 1.0.0 LANGUAGES CXX)
+project(Tupista VERSION 1.1.0 LANGUAGES CXX)
 
 # These three lines pin the language level for every target in the project:
 #   CMAKE_CXX_STANDARD 20         -> compile as C++20
