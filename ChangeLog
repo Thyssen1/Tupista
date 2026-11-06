@@ -1,12 +1,12 @@
-# Changelog
+# Tupista changelog
 
-Notable changes to Tupista. Format follows [Keep a Changelog](https://keepachangelog.com);
-versioning follows [Semantic Versioning](https://semver.org).
+## [1.1.0]
+- Cell names in a hint are clickable
+- Multi-select on the board — Ctrl+click, click-and-drag, Shift+click for a
+  block, and Shift+arrow keys. With more than one cell selected a digit pencils
+  itself into all of them at once rather than placing.
 
-Entries here describe what changed for someone USING Tupista — internal
-refactors belong in the git history, not in this file.
-
-## [1.0.0] - 2026-08-30
+## [1.0.0]
 
 First release: a desktop Sudoku assistant that explains its hints instead of
 just handing over answers.

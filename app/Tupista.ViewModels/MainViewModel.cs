@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 
 using Tupista.Interop;
 using Tupista.Storage;
@@ -65,10 +66,22 @@ public sealed class MainViewModel : ObservableObject
         // Both take a string because that is what a XAML CommandParameter is.
         // Parsing it here keeps the markup free of type-conversion ceremony.
         SelectCommand = new RelayCommand<CellViewModel>(Select);
+        ExtendSelectCommand = new RelayCommand<CellViewModel>(ExtendSelect);
+        SelectRangeCommand = new RelayCommand<CellViewModel>(SelectRange);
+        AddToSelectionCommand = new RelayCommand<CellViewModel>(AddToSelection);
         MoveCommand = new RelayCommand<string>(Move);
+        ExtendMoveCommand = new RelayCommand<string>(direction => Move(direction, extend: true));
         ResetCellCommand = new RelayCommand(ResetSelectedCell);
         TogglePencilCommand = new RelayCommand(() => IsPencilMode = !IsPencilMode);
         AuditMarksCommand = new RelayCommand(AuditMarks);
+
+        // Clicking a cell name in the hint jumps to it. Selecting rather than
+        // merely highlighting, so the keyboard lands there too and you can
+        // type the digit straight away.
+        FocusHintCellCommand = new RelayCommand<HintSegment>(segment =>
+        {
+            if (segment.IsCell) Select(Cells[segment.Row * 9 + segment.Col]);
+        });
 
         // Shift+digit notes a digit without leaving placement mode — the same
         // key, one modifier, so a single note does not cost two mode switches.
@@ -142,12 +155,17 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand<SavedBoard> LoadCommand { get; }
     public RelayCommand<SavedBoard> DeleteCommand { get; }
     public RelayCommand<CellViewModel> SelectCommand { get; }
+    public RelayCommand<CellViewModel> ExtendSelectCommand { get; }
+    public RelayCommand<CellViewModel> SelectRangeCommand { get; }
+    public RelayCommand<CellViewModel> AddToSelectionCommand { get; }
     public RelayCommand<string> MoveCommand { get; }
+    public RelayCommand<string> ExtendMoveCommand { get; }
     public RelayCommand<string> EnterDigitCommand { get; }
     public RelayCommand ResetCellCommand { get; }
     public RelayCommand TogglePencilCommand { get; }
     public RelayCommand AuditMarksCommand { get; }
     public RelayCommand<string> NoteDigitCommand { get; }
+    public RelayCommand<HintSegment> FocusHintCellCommand { get; }
 
     /// <summary>
     /// While on, typing a digit notes it instead of placing it.
@@ -202,7 +220,67 @@ public sealed class MainViewModel : ObservableObject
     public string HintText
     {
         get => _hintText;
-        private set => Set(ref _hintText, value);
+        private set
+        {
+            if (!Set(ref _hintText, value)) return;
+            RebuildHintLines();
+        }
+    }
+
+    /// <summary>
+    /// The hint, split into lines of clickable and non-clickable pieces.
+    /// The view renders these; <see cref="HintText"/> remains the plain text.
+    /// </summary>
+    public ObservableCollection<HintLine> HintLines { get; } = [];
+
+    /// <summary>
+    /// Matches a cell reference as the engine writes them: R4C7, 1-based.
+    /// Anchored to digits 1-9 so it cannot match anything else in the prose —
+    /// no technique name or digit list has this shape.
+    ///
+    /// ONE capturing group, deliberately. Regex.Split inserts every captured
+    /// group into its output, so inner groups around the digits would scatter
+    /// loose "4" and "7" pieces through the sentence. The digits are read off
+    /// the matched text by position instead, which the fixed R#C# shape makes
+    /// safe.
+    /// </summary>
+    private static readonly Regex CellReference = new(@"(R[1-9]C[1-9])", RegexOptions.Compiled);
+
+    private static bool IsCellReference(string text) =>
+        text.Length == 4 && text[0] == 'R' && text[2] == 'C'
+        && char.IsAsciiDigit(text[1]) && char.IsAsciiDigit(text[3]);
+
+    private void RebuildHintLines()
+    {
+        HintLines.Clear();
+        if (string.IsNullOrEmpty(HintText)) return;
+
+        foreach (var line in HintText.Split('\n'))
+        {
+            var segments = new List<HintSegment>();
+
+            // Split on the cell pattern, keeping the matches: Regex.Split with
+            // a capturing group yields text, match, text, match ...
+            foreach (var part in CellReference.Split(line))
+            {
+                if (part.Length == 0) continue;
+
+                if (IsCellReference(part))
+                {
+                    segments.Add(HintSegment.Cell(part, part[1] - '0', part[3] - '0'));
+                    continue;
+                }
+
+                // Break plain text after each space, so the space travels with
+                // the word before it. The view can then lay the pieces out with
+                // no spacing of its own and the sentence reassembles exactly,
+                // including punctuation that butts up against a cell name.
+                foreach (var word in Regex.Split(part, "(?<= )"))
+                    if (word.Length > 0) segments.Add(HintSegment.Words(word));
+            }
+
+            if (segments.Count > 0) HintLines.Add(new HintLine(segments));
+        }
     }
 
     public string BoardName
@@ -243,48 +321,145 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// The anchor: where the keyboard is, and the corner a Shift+click
+    /// rectangle is measured from.
+    ///
+    /// Not the same thing as "what is selected" — any number of cells can be
+    /// selected, and the anchor is one of them. This setter no longer touches
+    /// IsSelected at all; membership is owned by the Select* methods below, so
+    /// that moving the anchor and changing the selection stay separable.
+    /// </summary>
     public CellViewModel Selected
     {
         get => _selected;
         private set
         {
             if (ReferenceEquals(_selected, value)) return;
-            _selected.IsSelected = false;
             _selected = value;
-            _selected.IsSelected = true;
             Raise();
         }
     }
 
+    /// <summary>Every selected cell, anchor included.</summary>
+    public IEnumerable<CellViewModel> SelectedCells => Cells.Where(cell => cell.IsSelected);
+
+    public int SelectionCount => Cells.Count(cell => cell.IsSelected);
+
+    public bool HasMultiSelection => SelectionCount > 1;
+
     // --- input --------------------------------------------------------------
 
-    public void Select(CellViewModel cell) => Selected = cell;
+    /// <summary>A plain click: forget the old selection and take just this cell.</summary>
+    public void Select(CellViewModel cell)
+    {
+        foreach (var other in Cells) other.IsSelected = false;
+        cell.IsSelected = true;
+        Selected = cell;
+        SelectionChanged();
+    }
+
+    /// <summary>
+    /// Ctrl+click: add this cell to the selection, or drop it if it is already
+    /// in. Never empties the selection — with nothing selected there would be
+    /// no anchor for the keyboard, and typing would silently do nothing.
+    /// </summary>
+    public void ExtendSelect(CellViewModel cell)
+    {
+        if (cell.IsSelected && SelectionCount == 1) return;
+
+        cell.IsSelected = !cell.IsSelected;
+
+        if (cell.IsSelected) Selected = cell;
+        else if (ReferenceEquals(Selected, cell))
+            Selected = SelectedCells.First();   // the anchor must stay selected
+
+        SelectionChanged();
+    }
+
+    /// <summary>Shift+click: the whole block between the anchor and this cell.</summary>
+    public void SelectRange(CellViewModel cell)
+    {
+        var topRow = Math.Min(Selected.Row, cell.Row);
+        var bottomRow = Math.Max(Selected.Row, cell.Row);
+        var leftCol = Math.Min(Selected.Col, cell.Col);
+        var rightCol = Math.Max(Selected.Col, cell.Col);
+
+        foreach (var other in Cells)
+            other.IsSelected = other.Row >= topRow && other.Row <= bottomRow
+                            && other.Col >= leftCol && other.Col <= rightCol;
+
+        // The anchor deliberately stays put, so you can keep adjusting the
+        // far corner with repeated Shift+clicks.
+        SelectionChanged();
+    }
+
+    /// <summary>
+    /// Dragging across cells. Adds without toggling, on purpose: sweeping back
+    /// over a cell you already crossed must not switch it off again.
+    /// </summary>
+    public void AddToSelection(CellViewModel cell)
+    {
+        if (cell.IsSelected) return;
+        cell.IsSelected = true;
+        SelectionChanged();
+    }
 
     /// <summary>Arrow-key movement, named so a KeyBinding can pass a direction.</summary>
-    private void Move(string direction)
+    private void Move(string direction) => Move(direction, extend: false);
+
+    private void Move(string direction, bool extend)
     {
         switch (direction)
         {
-            case "up": MoveSelection(-1, 0); break;
-            case "down": MoveSelection(1, 0); break;
-            case "left": MoveSelection(0, -1); break;
-            case "right": MoveSelection(0, 1); break;
+            case "up": MoveSelection(-1, 0, extend); break;
+            case "down": MoveSelection(1, 0, extend); break;
+            case "left": MoveSelection(0, -1, extend); break;
+            case "right": MoveSelection(0, 1, extend); break;
         }
     }
 
-    public void MoveSelection(int rowDelta, int colDelta)
+    public void MoveSelection(int rowDelta, int colDelta, bool extend = false)
     {
         // Clamp rather than wrap: arrowing off the edge should stop, not
         // teleport you to the far side of the grid.
         var row = Math.Clamp(Selected.Row + rowDelta, 0, 8);
         var col = Math.Clamp(Selected.Col + colDelta, 0, 8);
-        Selected = Cells[row * 9 + col];
+        var target = Cells[row * 9 + col];
+
+        // Shift+arrow grows the selection; a bare arrow collapses it, which is
+        // how every grid behaves and what you want after a bulk edit.
+        if (!extend)
+            foreach (var other in Cells) other.IsSelected = false;
+
+        target.IsSelected = true;
+        Selected = target;
+        SelectionChanged();
+    }
+
+    private void SelectionChanged()
+    {
+        Raise(nameof(SelectedCells));
+        Raise(nameof(SelectionCount));
+        Raise(nameof(HasMultiSelection));
     }
 
     /// <summary>Type a digit into the selected cell. 0 clears it.</summary>
     public void EnterDigit(int digit)
     {
         if (digit is < 0 or > 9) return;
+
+        // With several cells selected a digit NOTES rather than places.
+        // Putting the same digit in several cells is nearly always illegal and
+        // just paints the board red; noting it across them is the move people
+        // actually want from a multi-selection.
+        if (HasMultiSelection && !IsEditingGivens)
+        {
+            if (digit == 0) ClearSelectedCells(marksToo: false);
+            else BulkToggleMark(digit);
+            return;
+        }
+
         if (!IsEditingGivens && Selected.IsGiven)
         {
             Status = "That digit is part of the puzzle and cannot be changed.";
@@ -321,20 +496,66 @@ public sealed class MainViewModel : ObservableObject
     /// A given is left alone while playing, for the same reason it cannot be
     /// typed over: it is the puzzle, not your work.
     /// </summary>
-    private void ResetSelectedCell()
+    private void ResetSelectedCell() => ClearSelectedCells(marksToo: true);
+
+    /// <summary>
+    /// Empty every selected cell. Givens are skipped while playing, for the
+    /// same reason they cannot be typed over: they are the puzzle, not your
+    /// work.
+    /// </summary>
+    private void ClearSelectedCells(bool marksToo)
     {
-        if (!IsEditingGivens && Selected.IsGiven)
+        var cleared = 0;
+        foreach (var cell in SelectedCells.ToList())
+        {
+            if (!IsEditingGivens && cell.IsGiven) continue;
+
+            cell.Value = 0;
+            if (marksToo) cell.Marks = 0;
+            if (IsEditingGivens) cell.IsGiven = false;
+            cell.RefreshNotes(0, ShowCandidates);
+            cleared++;
+        }
+
+        if (cleared == 0)
         {
             Status = "That digit is part of the puzzle and cannot be changed.";
             return;
         }
 
-        Selected.Value = 0;
-        Selected.Marks = 0;
-        if (IsEditingGivens) Selected.IsGiven = false;
-        Selected.RefreshNotes(0, ShowCandidates);
-
         BoardChanged();
+    }
+
+    /// <summary>
+    /// Note a digit across the whole selection, all or nothing.
+    ///
+    /// If every eligible cell already carries the digit it comes off all of
+    /// them, otherwise it goes on all of them. Toggling each cell
+    /// independently would scatter the marks — press 7 over a mixed selection
+    /// and you would invert it rather than set it, which is never the intent.
+    /// </summary>
+    private void BulkToggleMark(int digit)
+    {
+        var targets = SelectedCells.Where(cell => !cell.IsGiven && cell.Value == 0).ToList();
+        if (targets.Count == 0)
+        {
+            Status = "Those cells already have digits.";
+            return;
+        }
+
+        var bit = (ushort)(1 << digit);
+        var everyoneHasIt = targets.All(cell => (cell.Marks & bit) != 0);
+
+        foreach (var cell in targets)
+            cell.Marks = everyoneHasIt
+                ? (ushort)(cell.Marks & ~bit)
+                : (ushort)(cell.Marks | bit);
+
+        // Notes do not change the board, so the hint on screen stays valid.
+        RefreshCandidates();
+        Status = everyoneHasIt
+            ? $"Removed {digit} from {targets.Count} cells."
+            : $"Noted {digit} in {targets.Count} cells.";
     }
 
     /// <summary>
@@ -377,6 +598,15 @@ public sealed class MainViewModel : ObservableObject
     public void ToggleMark(int digit)
     {
         if (digit is < 1 or > 9) return;
+
+        // Shift+digit works across a selection too, on the same all-or-nothing
+        // rule as typing a digit does.
+        if (HasMultiSelection)
+        {
+            BulkToggleMark(digit);
+            return;
+        }
+
         if (Selected.IsGiven || Selected.Value != 0)
         {
             Status = "That cell already has a digit.";

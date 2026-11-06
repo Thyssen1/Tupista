@@ -376,7 +376,7 @@ public sealed class MainViewModelTests : IDisposable
 
         // The player's own notes take over from the engine's candidates.
         Assert.All(cell.Notes.Where(n => n.Shown), n => Assert.True(n.IsUserMark));
-        Assert.Single(cell.Notes.Where(n => n.Shown));
+        Assert.Single(cell.Notes, n => n.Shown);
     }
 
     [Fact]
@@ -441,6 +441,308 @@ public sealed class MainViewModelTests : IDisposable
 
         Assert.False(viewModel.IsSolved);
         Assert.Empty(viewModel.CompletionMessage);
+    }
+
+    // --- multi-select -------------------------------------------------------
+
+    private static MainViewModel Playing(MainViewModel viewModel)
+    {
+        TypeIn(viewModel, Puzzle);
+        viewModel.TogglePlayCommand.Execute(null);
+        return viewModel;
+    }
+
+    [Fact]
+    public void APlainClickCollapsesTheSelection()
+    {
+        var viewModel = Playing(NewViewModel());
+
+        viewModel.Select(viewModel.Cells[0]);
+        viewModel.ExtendSelect(viewModel.Cells[4]);
+        Assert.Equal(2, viewModel.SelectionCount);
+
+        viewModel.Select(viewModel.Cells[8]);
+
+        Assert.Equal(1, viewModel.SelectionCount);
+        Assert.Same(viewModel.Cells[8], viewModel.Selected);
+    }
+
+    [Fact]
+    public void CtrlClickAddsThenRemovesACell()
+    {
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);
+
+        viewModel.ExtendSelect(viewModel.Cells[4]);
+        Assert.Equal(2, viewModel.SelectionCount);
+        Assert.True(viewModel.HasMultiSelection);
+
+        viewModel.ExtendSelect(viewModel.Cells[4]);
+        Assert.Equal(1, viewModel.SelectionCount);
+        Assert.False(viewModel.Cells[4].IsSelected);
+    }
+
+    [Fact]
+    public void TheSelectionIsNeverLeftEmpty()
+    {
+        // With nothing selected there is no anchor, so the keyboard would have
+        // nowhere to go and typing would silently do nothing.
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);
+
+        viewModel.ExtendSelect(viewModel.Cells[0]);
+
+        Assert.Equal(1, viewModel.SelectionCount);
+        Assert.True(viewModel.Cells[0].IsSelected);
+    }
+
+    [Fact]
+    public void DeselectingTheAnchorMovesItToACellStillSelected()
+    {
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);
+        viewModel.ExtendSelect(viewModel.Cells[4]);   // anchor is now cell 4
+
+        viewModel.ExtendSelect(viewModel.Cells[4]);   // drop the anchor itself
+
+        Assert.True(viewModel.Selected.IsSelected);
+        Assert.Same(viewModel.Cells[0], viewModel.Selected);
+    }
+
+    [Fact]
+    public void ShiftClickSelectsTheRectangleBetweenAnchorAndCell()
+    {
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[1 * 9 + 1]);      // R2C2
+
+        viewModel.SelectRange(viewModel.Cells[3 * 9 + 4]); // R4C5
+
+        // Rows 1-3, columns 1-4 inclusive: 3 x 4 cells.
+        Assert.Equal(12, viewModel.SelectionCount);
+        Assert.All(viewModel.SelectedCells, cell =>
+        {
+            Assert.InRange(cell.Row, 1, 3);
+            Assert.InRange(cell.Col, 1, 4);
+        });
+
+        // The anchor stays put, so the far corner can be adjusted again.
+        Assert.Same(viewModel.Cells[1 * 9 + 1], viewModel.Selected);
+    }
+
+    [Fact]
+    public void ARectangleWorksBackwardsToo()
+    {
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[5 * 9 + 6]);      // bottom-right first
+
+        viewModel.SelectRange(viewModel.Cells[3 * 9 + 4]); // up and to the left
+
+        Assert.Equal(9, viewModel.SelectionCount);         // rows 3-5, cols 4-6
+    }
+
+    [Fact]
+    public void DraggingBackOverACellDoesNotDeselectIt()
+    {
+        // AddToSelection adds without toggling, so sweeping back across a cell
+        // during a drag leaves it selected.
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);
+
+        viewModel.AddToSelection(viewModel.Cells[1]);
+        viewModel.AddToSelection(viewModel.Cells[1]);
+
+        Assert.True(viewModel.Cells[1].IsSelected);
+        Assert.Equal(2, viewModel.SelectionCount);
+    }
+
+    [Fact]
+    public void ShiftArrowGrowsTheSelectionAndPlainArrowCollapsesIt()
+    {
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);
+
+        viewModel.ExtendMoveCommand.Execute("right");
+        viewModel.ExtendMoveCommand.Execute("right");
+
+        Assert.Equal(3, viewModel.SelectionCount);
+        Assert.Same(viewModel.Cells[2], viewModel.Selected);
+
+        viewModel.MoveCommand.Execute("down");
+
+        Assert.Equal(1, viewModel.SelectionCount);
+        Assert.Same(viewModel.Cells[1 * 9 + 2], viewModel.Selected);
+    }
+
+    [Fact]
+    public void ADigitNotesAcrossTheSelectionRatherThanPlacing()
+    {
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);
+        viewModel.ExtendSelect(viewModel.Cells[3]);
+
+        viewModel.EnterDigitCommand.Execute("7");
+
+        Assert.Equal(0, viewModel.Cells[0].Value);        // nothing placed
+        Assert.Equal(0, viewModel.Cells[3].Value);
+        Assert.Equal(1 << 7, viewModel.Cells[0].Marks);
+        Assert.Equal(1 << 7, viewModel.Cells[3].Marks);
+    }
+
+    [Fact]
+    public void BulkNotesAreAllOrNothing()
+    {
+        // A mixed selection must end up uniform, not inverted cell by cell.
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);
+        viewModel.NoteDigitCommand.Execute("7");          // only this one has a 7
+
+        viewModel.ExtendSelect(viewModel.Cells[3]);
+        viewModel.EnterDigitCommand.Execute("7");
+
+        Assert.Equal(1 << 7, viewModel.Cells[0].Marks);
+        Assert.Equal(1 << 7, viewModel.Cells[3].Marks);
+
+        // Now everyone has it, so a second press takes it off everyone.
+        viewModel.EnterDigitCommand.Execute("7");
+        Assert.Equal(0, viewModel.Cells[0].Marks);
+        Assert.Equal(0, viewModel.Cells[3].Marks);
+    }
+
+    [Fact]
+    public void ShiftDigitAlsoNotesAcrossTheSelection()
+    {
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);
+        viewModel.ExtendSelect(viewModel.Cells[3]);
+
+        viewModel.NoteDigitCommand.Execute("4");
+
+        Assert.Equal(1 << 4, viewModel.Cells[0].Marks);
+        Assert.Equal(1 << 4, viewModel.Cells[3].Marks);
+    }
+
+    [Fact]
+    public void BulkNotesSkipGivensAndFilledCells()
+    {
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);             // empty
+        viewModel.ExtendSelect(viewModel.Cells[1]);       // a given holding 2
+
+        viewModel.EnterDigitCommand.Execute("7");
+
+        Assert.Equal(1 << 7, viewModel.Cells[0].Marks);
+        Assert.Equal(0, viewModel.Cells[1].Marks);
+        Assert.Equal(2, viewModel.Cells[1].Value);        // untouched
+    }
+
+    [Fact]
+    public void EscapeClearsEverySelectedCell()
+    {
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);
+        viewModel.EnterDigitCommand.Execute("8");         // single select: places
+        viewModel.Select(viewModel.Cells[3]);
+        viewModel.EnterDigitCommand.Execute("5");
+
+        viewModel.Select(viewModel.Cells[0]);
+        viewModel.ExtendSelect(viewModel.Cells[3]);
+        viewModel.ResetCellCommand.Execute(null);
+
+        Assert.Equal(0, viewModel.Cells[0].Value);
+        Assert.Equal(0, viewModel.Cells[3].Value);
+    }
+
+    [Fact]
+    public void SingleCellBehaviourIsUnchanged()
+    {
+        // The whole point is that nothing changes until you actually
+        // multi-select.
+        var viewModel = Playing(NewViewModel());
+        viewModel.Select(viewModel.Cells[0]);
+
+        viewModel.EnterDigitCommand.Execute("8");
+        Assert.Equal(8, viewModel.Cells[0].Value);
+        Assert.False(viewModel.HasMultiSelection);
+    }
+
+    [Fact]
+    public void HintTextIsSplitIntoClickableCellReferences()
+    {
+        var viewModel = NewViewModel();
+        TypeIn(viewModel, Puzzle);
+        viewModel.TogglePlayCommand.Execute(null);
+
+        // Escalate to the full hint, which is the level that names cells.
+        viewModel.HintCommand.Execute(null);
+        viewModel.HintCommand.Execute(null);
+        viewModel.HintCommand.Execute(null);
+
+        Assert.NotEmpty(viewModel.HintLines);
+        var cells = viewModel.HintLines
+            .SelectMany(line => line.Segments)
+            .Where(segment => segment.IsCell)
+            .ToList();
+
+        Assert.NotEmpty(cells);
+        Assert.All(cells, segment =>
+        {
+            Assert.InRange(segment.Row, 0, 8);
+            Assert.InRange(segment.Col, 0, 8);
+        });
+    }
+
+    [Fact]
+    public void TheSegmentsReassembleIntoTheOriginalText()
+    {
+        // The split must be lossless: spacing and punctuation around a cell
+        // name have to survive, or the hint reads wrong on screen.
+        var viewModel = NewViewModel();
+        TypeIn(viewModel, Puzzle);
+        viewModel.TogglePlayCommand.Execute(null);
+        viewModel.HintCommand.Execute(null);
+        viewModel.HintCommand.Execute(null);
+        viewModel.HintCommand.Execute(null);
+
+        var rebuilt = string.Join("\n", viewModel.HintLines
+            .Select(line => string.Concat(line.Segments.Select(s => s.Text))));
+
+        Assert.Equal(viewModel.HintText.Replace("\r", ""), rebuilt);
+    }
+
+    [Fact]
+    public void ClickingACellReferenceSelectsThatCell()
+    {
+        var viewModel = NewViewModel();
+        TypeIn(viewModel, Puzzle);
+        viewModel.TogglePlayCommand.Execute(null);
+        viewModel.HintCommand.Execute(null);
+        viewModel.HintCommand.Execute(null);
+        viewModel.HintCommand.Execute(null);
+
+        var target = viewModel.HintLines
+            .SelectMany(line => line.Segments)
+            .First(segment => segment.IsCell);
+
+        viewModel.FocusHintCellCommand.Execute(target);
+
+        Assert.Equal(target.Row, viewModel.Selected.Row);
+        Assert.Equal(target.Col, viewModel.Selected.Col);
+        Assert.True(viewModel.Selected.IsSelected);
+    }
+
+    [Fact]
+    public void TheHintLinesClearWithTheHint()
+    {
+        var viewModel = NewViewModel();
+        TypeIn(viewModel, Puzzle);
+        viewModel.TogglePlayCommand.Execute(null);
+        viewModel.HintCommand.Execute(null);
+        Assert.NotEmpty(viewModel.HintLines);
+
+        viewModel.Select(viewModel.Cells[0]);
+        viewModel.EnterDigitCommand.Execute("4");
+
+        Assert.Empty(viewModel.HintLines);
     }
 
     [Fact]

@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Tupista.ViewModels"
         xmlns:storage="using:Tupista.Storage"
+        xmlns:local="using:Tupista.Desktop"
         x:Class="Tupista.Desktop.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Tupista" Width="1040" Height="760"
@@ -103,6 +104,12 @@
                         <KeyBinding Gesture="Left"  Command="{Binding MoveCommand}" CommandParameter="left" />
                         <KeyBinding Gesture="Right" Command="{Binding MoveCommand}" CommandParameter="right" />
 
+                        <!-- Shift+arrow grows the selection instead of moving it. -->
+                        <KeyBinding Gesture="Shift+Up"    Command="{Binding ExtendMoveCommand}" CommandParameter="up" />
+                        <KeyBinding Gesture="Shift+Down"  Command="{Binding ExtendMoveCommand}" CommandParameter="down" />
+                        <KeyBinding Gesture="Shift+Left"  Command="{Binding ExtendMoveCommand}" CommandParameter="left" />
+                        <KeyBinding Gesture="Shift+Right" Command="{Binding ExtendMoveCommand}" CommandParameter="right" />
+
                         <KeyBinding Gesture="D1" Command="{Binding EnterDigitCommand}" CommandParameter="1" />
                         <KeyBinding Gesture="D2" Command="{Binding EnterDigitCommand}" CommandParameter="2" />
                         <KeyBinding Gesture="D3" Command="{Binding EnterDigitCommand}" CommandParameter="3" />
@@ -165,15 +172,21 @@
 
                                          IsTabStop=False keeps Tab from walking
                                          through all 81 of them. -->
+                                    <!-- Selection goes through the attached
+                                         behaviour rather than a Command, because
+                                         a Command binding cannot see Ctrl, Shift
+                                         or a drag. Binding Command as well would
+                                         fight it: a Ctrl+click would extend the
+                                         selection on press and then collapse it
+                                         again when Click fired. -->
                                     <Button Classes="cell"
                                             IsTabStop="False"
+                                            local:CellSelectionBehavior.Cell="{Binding}"
                                             Classes.selected="{Binding IsSelected}"
                                             Classes.conflict="{Binding IsConflicted}"
                                             Classes.placement="{Binding IsHintPlacement}"
                                             Classes.pattern="{Binding IsHintPattern}"
-                                            Classes.eliminated="{Binding IsHintEliminated}"
-                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectCommand}"
-                                            CommandParameter="{Binding}">
+                                            Classes.eliminated="{Binding IsHintEliminated}">
                                         <Panel>
                                             <TextBlock Classes="digit"
                                                        Classes.given="{Binding IsGiven}"
@@ -316,8 +329,54 @@
                             Background="{DynamicResource HintPanelBrush}">
                         <StackPanel Spacing="6">
                             <TextBlock Text="HINT" Classes="sectionHeader" Margin="0" />
-                            <TextBlock Text="{Binding HintText}" TextWrapping="Wrap"
-                                       LineHeight="19" />
+
+                            <!-- The hint is rendered piece by piece rather than
+                                 as one TextBlock, so that every cell name in it
+                                 is clickable and jumps the selection there.
+
+                                 Outer list = lines (the numbered steps must stay
+                                 on their own lines); inner WrapPanel = the words
+                                 of one line, which wrap like ordinary text. Each
+                                 piece already carries its own trailing space, so
+                                 nothing here adds spacing and the sentence reads
+                                 exactly as the engine wrote it. -->
+                            <ItemsControl ItemsSource="{Binding HintLines}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:HintLine">
+                                        <ItemsControl ItemsSource="{Binding Segments}"
+                                                      Margin="0,0,0,3">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:HintSegment">
+                                                    <Panel>
+                                                        <TextBlock Text="{Binding Text}"
+                                                                   LineHeight="19"
+                                                                   IsVisible="{Binding !IsCell}" />
+                                                        <!-- Same behaviour as the board cells, so
+                                                             Ctrl+click adds to the selection. No
+                                                             Command: it would fire on Click and
+                                                             collapse what Ctrl just extended.
+
+                                                             Focusable=False so clicking a link
+                                                             leaves keyboard focus on the board —
+                                                             otherwise the next digit you type
+                                                             would go nowhere. -->
+                                                        <Button Classes="cellLink"
+                                                                Focusable="False"
+                                                                Content="{Binding Text}"
+                                                                IsVisible="{Binding IsCell}"
+                                                                local:CellSelectionBehavior.HintCell="{Binding}" />
+                                                    </Panel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
 

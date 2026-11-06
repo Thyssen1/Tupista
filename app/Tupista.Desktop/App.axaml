@@ -144,6 +144,28 @@
         </Style>
 
         <!-- Small pill buttons for the saved-puzzle rows. -->
+        <!-- A cell name inside the hint text. Styled as a link rather than a
+             button so it reads as part of the sentence: no chrome, the "your
+             work" colour, underlined, and a hand cursor to say it is live. -->
+        <Style Selector="Button.cellLink">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource SelectionBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="TextBlock.TextDecorations" Value="Underline" />
+        </Style>
+        <Style Selector="Button.cellLink /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="Button.cellLink:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="TextBlock.Foreground" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
         <Style Selector="Button.chip">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
